@@ -100,10 +100,62 @@ Loopy-ready `SKILL.md`.
    policy blocks non-allowlisted LLM hosts (NVIDIA); use an allowlisted, funded
    endpoint (Anthropic) or run distillation outside the sandbox.
 
-### Next loop (Inner Loop 2 — handoff to Loopy)
+---
 
-Bind a distilled `SKILL.md` to a Loopy loop (`integration/core`: parse skill →
-catalog → governed run) and add the `loop.md` for each example.
+## Inner Loop 2 — Skill → governed Loopy loop (the integration layer)
+
+**Goal:** turn a distilled `SKILL.md` into a governed, runnable Loopy-style loop
+that executes in a bounded way and produces a receipt.
+
+### Success criteria
+
+- [x] A `SKILL.md` can be parsed and converted into a basic `loop.md`.
+- [x] The loop includes objective, success criteria, feedback steps, and stopping
+  conditions.
+- [x] The loop can be executed in a bounded way and produces a receipt.
+- [x] At least one example (form-fill) has a working `loop.md` + execution flow.
+- [x] Basic governance/traceability is present (audit trail + approval gate).
+- [x] The integration lives in `/integration/` as planned.
+
+### What landed
+
+| Piece | Where |
+|---|---|
+| `SKILL.md → Skill → loop.md` (deterministic, no LLM) | `integration/core/skill_to_loop.py` |
+| Bounded runner with approval gate + terminal states | `integration/core/loop_runner.py` |
+| Loopy-format run receipt | `integration/core/receipt.py` |
+| Append-only audit trail (`AuditEvent`) + approval gate | `integration/governance/audit.py` |
+| `forgeloop {bind,run,audit}` CLI | `integration/cli/forgeloop.py` |
+| Worked examples (loop.md + RECEIPT.md) | `examples/form-fill/`, `examples/login-flow/` |
+
+### Grounding
+
+The `loop.md` and receipt formats are mapped onto **Loopy's real conventions**
+(`loopy/skills/loopy/SKILL.md`, `references/run.md`): the Observe→Choose→Act→Verify
+→Record→Repeat cycle, the six named terminal states (Success · Clean no-op ·
+Blocked · Approval required · Exhausted · No progress), a finite run boundary that
+is *not* invented, and the exact run-receipt shape. Section mapping is documented
+in [architecture.md](architecture.md) / `integration/core/README.md`.
+
+### Debrief
+
+- _What worked:_ the SKILL.md contract pinned in Inner Loop 1 made a **deterministic,
+  LLM-free** transform possible — every loop section comes from a real skill
+  section. The approval gate makes the honest default outcome of running a
+  login/form-fill loop **`Approval required`**, not a fake success.
+- _Honest boundary:_ there is **no live browser executor yet**, so a real run stops
+  at the gate; `--simulate` walks the full cycle but is clearly labelled and
+  returns `Clean no-op`, never `Success`. Wiring a real executor (Playwright MCP)
+  is Inner Loop 3.
+- _Design choice:_ runtime state (audit log, persisted receipts) lives under
+  `./.data/` (gitignored); the *example* `loop.md`/`RECEIPT.md` are committed as
+  reference artifacts.
+
+### Next (Inner Loop 3)
+
+A real browser **executor** (Playwright MCP) behind the approval gate so an
+approved run acts for real and reaches `Success`/`No progress` on live evidence,
+plus a small **catalog** of bound loops.
 
 ---
 

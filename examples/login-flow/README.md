@@ -10,7 +10,8 @@ half of the ForgeLoop path, using a recorded login workflow.
 | `trace.json` | ✅ committed | A **human-track** recording of logging into `the-internet.herokuapp.com` (username → password → submit → reaches `/secure`). Uses the site's **public demo credentials** (`tomsmith` / `SuperSecretPassword!`) — never put real secrets in a committed trace. |
 | `SKILL.md` | ✅ committed | The distilled skill — produced by a real run (`claude-haiku-4-5`, distill v1). Passes the quality checklist; site-agnostic; no credentials leaked. |
 | `TRACE_GUIDE.md` | ✅ committed | The state-machine navigation guide emitted alongside the skill. |
-| `loop.md` | ⏳ once produced | The Loopy loop the skill binds to. |
+| `meta.json` / `evidence.jsonl` | ✅ committed | Distill provenance + source-segment evidence. |
+| `loop.md` / `RECEIPT.md` | ✅ committed | The governed Loopy loop and a run receipt (`Approval required`), from `integration/` (Inner Loop 2). Bind/run: `python -m integration.cli.forgeloop bind examples/login-flow/SKILL.md --out examples/login-flow/loop.md`. |
 
 `trace.json` is validated: it loads via the harness adapter (auto-detected as
 `human-tracks`) and **atomizes into 1 clean segment** (`/login → /secure`,
