@@ -24,9 +24,10 @@ Loopy-ready `SKILL.md`.
 - [x] ForgeLoop repo exists with the agreed structure.
 - [x] Forge's extension + server + harness are integrated and runnable. *(code
   committed in-tree, wired to real entrypoints; runs locally with Python + pnpm)*
-- [ ] A user can record a workflow and get a clean `SKILL.md`. *(needs a live
-  `SF_LLM_KEY` + an interactive browser — can't be exercised headlessly here)*
-- [ ] The skill is good enough to be consumed by Loopy.
+- [x] A user can record a workflow and get a clean `SKILL.md`. *(live run: login
+  trace → `examples/login-flow/SKILL.md`, distilled with `claude-haiku-4-5`)*
+- [x] The skill is good enough to be consumed by Loopy. *(passes the full quality
+  checklist; site-agnostic; no credentials leaked)*
 - [x] Basic setup instructions exist.
 
 ### Step status
@@ -36,10 +37,10 @@ Loopy-ready `SKILL.md`.
 | 1 | Create repo + structure | ✅ done | Scaffold, README, structure. |
 | 2 | Bring in Forge code | ✅ done | Browser-BC committed to `forge/`, loopy to `loopy/` (135 + 53 files). Blocker resolved — this session has access to all three repos. |
 | 3 | Basic integration / setup scripts | ✅ done | `vendor.sh` (now a refresh tool), `setup-forge.sh`, `setup-loopy.sh`, `bootstrap.sh` — rewritten for the **real** Forge (pure-Python server/harness, pnpm extension). |
-| 4 | Test recording + distillation | ⏳ partial | **Verified runnable in-container**: deps install, server boots on :8099 + serves the panel, `/api/buckets` works, and a synthesized login `trace.json` loads + **atomizes into 1 segment** (deterministic, no LLM). classify+distill are blocked here only by **LLM access** (NVIDIA host blocked by egress policy; an Anthropic key was reachable but out of credits). One funded+reachable key away from a live `SKILL.md`. |
-| 5 | Quality check + improve prompts | ⏳ pending | `SKILL.md` **contract pinned** in [architecture.md](architecture.md) from `forge/harness/distiller.py`; worked input at [`examples/login-flow/`](../examples/login-flow/). Live quality pass needs the Step 4 distilled output. |
+| 4 | Test recording + distillation | ✅ done | **Live end-to-end run**: `python -m harness.main full --track-file examples/login-flow/trace.json` → 1 track ingested → 1 segment classified (`login-with-credentials`) → 1 bucket → 1 skill distilled (`claude-haiku-4-5`, 635 in / 5329 out). Output in [`examples/login-flow/`](../examples/login-flow/). Server boot + panel + `/api/buckets` also verified. |
+| 5 | Quality check + improve prompts | ✅ done | `SKILL.md` passes the full [forge-setup.md](forge-setup.md) checklist (clear goal, atomic ordered steps, concrete-but-generalized selectors, **no leaked credentials**, Loopy-followable). Contract pinned in [architecture.md](architecture.md). Prompt in `forge/harness/distiller.py` if quality needs raising (e.g. re-distill with Opus). |
 | 6 | Documentation | ✅ done | `forge-setup.md`, `loopy-setup.md`, `architecture.md`, this file — all corrected to reality. |
-| 7 | Debrief + lock loop | ⏳ pending | Run end-to-end twice with different workflows. |
+| 7 | Debrief + lock loop | 🔶 1 of 2 | First end-to-end run is clean and passes the checklist (login-flow). One more run with a *different* workflow (e.g. form-fill) locks the loop. |
 
 ### Blocker — resolved
 
@@ -59,13 +60,25 @@ clone is runnable with no external repo access.
   and port 4000 / `ANTHROPIC_API_KEY`; the real Forge is pure-Python on port 8099
   reading `SF_LLM_KEY` from `forge/.env.local`. All of that was corrected.
 
-### Remaining to lock the loop
+### First run debrief (login-flow)
 
-1. Set `SF_LLM_KEY` in `forge/.env.local`.
-2. `cd forge && ./scripts/start.sh`, load `forge/extension/dist/chrome-mv3`.
-3. Record two short workflows → confirm each yields a `SKILL.md` that passes the
-   [forge-setup.md](forge-setup.md) checklist.
-4. Tune `forge/harness/distiller.py` if quality is low; re-distill.
+- _What worked:_ the headless path — a hand-authored `human-tracks` `trace.json`
+  through `harness.main full` — produced a high-quality, **site-agnostic**
+  `SKILL.md` on the cheapest model (`claude-haiku-4-5`, ~6k tokens total). The
+  distiller correctly **generalized away the recorded selectors/credentials** (no
+  leak), and emitted the full contract (milestones, terminal/false-terminal
+  states, recovery, red-lines) plus a `TRACE_GUIDE.md`.
+- _What was hard:_ LLM **reachability**, not the code — NVIDIA is egress-blocked
+  in the web environment and the first Anthropic key was out of credits. Once a
+  funded, allowlisted key was in place, the run was one command.
+
+### Remaining to lock the loop (Step 7)
+
+1. ✅ Run #1: login-flow → clean `SKILL.md` (done, committed).
+2. ⏳ Run #2: a *different* workflow (e.g. `examples/form-fill/`) → confirm it also
+   passes the [forge-setup.md](forge-setup.md) checklist.
+3. Optional: re-distill login-flow with Opus and diff against the Haiku version to
+   gauge the quality/cost tradeoff before standardizing a model.
 
 ---
 

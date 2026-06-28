@@ -7,8 +7,9 @@ half of the ForgeLoop path, using a recorded login workflow.
 
 | File | Status | What |
 |---|---|---|
-| `trace.json` | ✅ committed | A **human-track** recording of logging into `the-internet.herokuapp.com` (username → password → submit → reaches `/secure`). |
-| `SKILL.md` | ⏳ once produced | The distilled skill — added after a live distill run. |
+| `trace.json` | ✅ committed | A **human-track** recording of logging into `the-internet.herokuapp.com` (username → password → submit → reaches `/secure`). Uses the site's **public demo credentials** (`tomsmith` / `SuperSecretPassword!`) — never put real secrets in a committed trace. |
+| `SKILL.md` | ✅ committed | The distilled skill — produced by a real run (`claude-haiku-4-5`, distill v1). Passes the quality checklist; site-agnostic; no credentials leaked. |
+| `TRACE_GUIDE.md` | ✅ committed | The state-machine navigation guide emitted alongside the skill. |
 | `loop.md` | ⏳ once produced | The Loopy loop the skill binds to. |
 
 `trace.json` is validated: it loads via the harness adapter (auto-detected as
