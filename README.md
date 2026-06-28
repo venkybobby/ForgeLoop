@@ -82,13 +82,25 @@ the goal, success criteria, and step plan.
 
 ## Status
 
-✅ **Inner Loop 1 complete.** The Forge + Loopy code is committed in-tree and wired
-to its real entrypoints (server on 8099, `harness/main.py` distiller,
-`forge/.env.local` config). Two end-to-end runs on different workflows produced
-clean, site-agnostic `SKILL.md` files — see [`examples/login-flow/`](examples/login-flow/)
-and [`examples/form-fill/`](examples/form-fill/). All Inner Loop 1 success criteria
-are met.
+✅ **Inner Loops 1 & 2 complete.**
 
-▶️ **Next: Inner Loop 2** — bind a distilled `SKILL.md` to a Loopy loop
-(`integration/core`: parse skill → catalog → governed run). See
+- **Loop 1 (Forge):** code committed in-tree and wired to real entrypoints; two
+  workflows distilled into clean, site-agnostic `SKILL.md` files.
+- **Loop 2 (integration):** the glue layer is implemented in `integration/` — a
+  distilled `SKILL.md` is bound into a governed Loopy `loop.md` and run in bounded
+  passes with an **approval gate**, producing a Loopy-format **receipt** and an
+  **audit trail**.
+
+```bash
+# skill -> governed loop -> bounded run -> receipt
+python -m integration.cli.forgeloop bind examples/form-fill/SKILL.md --out examples/form-fill/loop.md
+python -m integration.cli.forgeloop run  examples/form-fill/loop.md --skill examples/form-fill/SKILL.md
+python -m integration.cli.forgeloop audit
+```
+
+See [`examples/form-fill/`](examples/form-fill/) (loop.md + RECEIPT.md) and
+[`examples/login-flow/`](examples/login-flow/).
+
+▶️ **Next: Inner Loop 3** — a real browser executor (Playwright MCP) behind the
+approval gate so an approved run acts for real, plus a catalog of bound loops. See
 [docs/loop-engineering.md](docs/loop-engineering.md) for the status board and debrief.

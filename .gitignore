@@ -45,6 +45,8 @@ runs/
 traces/
 *.sqlite
 *.db
+# Integration runtime state (audit trail, persisted run receipts):
+.data/
 
 # --- OS / editor ---
 .DS_Store

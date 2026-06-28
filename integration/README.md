@@ -4,20 +4,27 @@ This is where **most new ForgeLoop development happens.** Forge and Loopy stay
 close to their upstreams (vendored in `forge/` and `loopy/`); the integration
 layer is the product we build on top of them.
 
-The stack for this layer is intentionally **undecided** until the upstream Forge
-and Loopy code is in hand — Forge's extension+server strongly imply Node/TypeScript,
-while a distillation/loop runtime is often Python. Once `vendor.sh` has run and we
-can see the real interfaces, we lock the stack (tracked as a decision in
-[../docs/architecture.md](../docs/architecture.md)).
+**Stack: Python** (stdlib-only). Locked once the real interfaces were in hand:
+Forge's harness is pure Python and emits `SKILL.md` + `meta.json`, and Loopy is a
+set of Markdown skills/conventions — so the glue is a small, dependency-free Python
+layer that reads those files and drives bounded runs.
 
 ## The four modules
 
-| Module | Responsibility | Consumes | Produces |
-|--------|----------------|----------|----------|
-| [`core/`](core/) | Orchestration: turn a `SKILL.md` into a registered, runnable loop and drive it end-to-end | Forge skills, Loopy library | runs |
-| [`dashboard/`](dashboard/) | Web UI to browse skills, loops, and runs | core APIs | UI |
-| [`governance/`](governance/) | Audit logs, run traces, approval gates | run events | audit trail |
-| [`cli/`](cli/) | Command-line entry points for the above | core APIs | terminal output |
+| Module | Responsibility | Status |
+|--------|----------------|--------|
+| [`core/`](core/) | Orchestration: `SKILL.md` → `loop.md` → bounded run → receipt | ✅ implemented (Inner Loop 2) |
+| [`governance/`](governance/) | Append-only audit trail + approval gate | ✅ implemented (audit + gate) |
+| [`cli/`](cli/) | `forgeloop {bind,run,audit}` over core + governance | ✅ implemented |
+| [`dashboard/`](dashboard/) | Web UI to browse skills, loops, and runs | ⏳ design only |
+
+## Quick start
+
+```bash
+python -m integration.cli.forgeloop bind examples/form-fill/SKILL.md --out examples/form-fill/loop.md
+python -m integration.cli.forgeloop run  examples/form-fill/loop.md --skill examples/form-fill/SKILL.md
+python -m integration.cli.forgeloop audit
+```
 
 ## Data flow
 
@@ -33,6 +40,7 @@ forge/harness  ──SKILL.md──►  core (register)  ──►  catalog
                               dashboard (observe)
 ```
 
-Each module currently ships a **design README** describing its contract. Code
-lands once the stack is locked — see each module's README for its intended
-surface.
+`core`, `governance`, and `cli` are **implemented** — see each module's README and
+the worked examples in [`../examples/`](../examples/). `dashboard` is still a design
+README. A skill **catalog/registry** and a real browser **executor** are the next
+pieces (Inner Loop 3+).
