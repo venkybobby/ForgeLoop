@@ -1,0 +1,32 @@
+{
+  "schema_version": "human_tracks_v1",
+  "case_id": "demo-form-fill-httpbin-001",
+  "domain": "httpbin.org",
+  "task_instruction": "Fill out and submit the multi-field order form (name, phone, email, size, topping, comments).",
+  "navigation_chain": ["httpbin.org"],
+  "events": [
+    { "type": "pageLoad", "url": "https://httpbin.org/forms/post", "ts": 0 },
+    { "type": "click",  "url": "https://httpbin.org/forms/post", "ts": 900,
+      "target": {"tagName": "INPUT", "id": "", "textContent": "", "xpath": "//input[@name=\"custname\"]"}, "x": 300, "y": 150 },
+    { "type": "input",  "url": "https://httpbin.org/forms/post", "ts": 1600,
+      "target": {"tagName": "INPUT", "id": "", "xpath": "//input[@name=\"custname\"]"}, "value": "Jane Doe" },
+    { "type": "click",  "url": "https://httpbin.org/forms/post", "ts": 2300,
+      "target": {"tagName": "INPUT", "id": "", "xpath": "//input[@name=\"custtel\"]"}, "x": 300, "y": 190 },
+    { "type": "input",  "url": "https://httpbin.org/forms/post", "ts": 3000,
+      "target": {"tagName": "INPUT", "id": "", "xpath": "//input[@name=\"custtel\"]"}, "value": "555-0142" },
+    { "type": "click",  "url": "https://httpbin.org/forms/post", "ts": 3700,
+      "target": {"tagName": "INPUT", "id": "", "xpath": "//input[@name=\"custemail\"]"}, "x": 300, "y": 230 },
+    { "type": "input",  "url": "https://httpbin.org/forms/post", "ts": 4400,
+      "target": {"tagName": "INPUT", "id": "", "xpath": "//input[@name=\"custemail\"]"}, "value": "jane@example.com" },
+    { "type": "click",  "url": "https://httpbin.org/forms/post", "ts": 5100,
+      "target": {"tagName": "INPUT", "textContent": "Medium", "xpath": "//input[@name=\"size\" and @value=\"medium\"]"}, "x": 320, "y": 290 },
+    { "type": "click",  "url": "https://httpbin.org/forms/post", "ts": 5800,
+      "target": {"tagName": "INPUT", "textContent": "Bacon", "xpath": "//input[@name=\"topping\" and @value=\"bacon\"]"}, "x": 320, "y": 340 },
+    { "type": "input",  "url": "https://httpbin.org/forms/post", "ts": 6700,
+      "target": {"tagName": "TEXTAREA", "id": "", "xpath": "//textarea[@name=\"comments\"]"}, "value": "Please leave at the front door." },
+    { "type": "click",  "url": "https://httpbin.org/forms/post", "ts": 7600,
+      "target": {"tagName": "BUTTON", "textContent": "Submit order", "xpath": "//button[@type=\"submit\"]"}, "x": 300, "y": 420 },
+    { "type": "pageLoad", "url": "https://httpbin.org/post", "ts": 9000 }
+  ],
+  "outcome": {"success": true, "final_url": "https://httpbin.org/post"}
+}

@@ -82,10 +82,13 @@ the goal, success criteria, and step plan.
 
 ## Status
 
-🚧 **Integrating.** Repo structure, glue-layer skeleton, setup scripts, and docs
-are in place, and the Forge + Loopy code is now **committed in-tree** and wired to
-its real entrypoints (server on 8099, `harness/main.py` distiller, `forge/.env.local`
-config). Still pending: a live end-to-end record → distill run (needs an
-`SF_LLM_KEY` and an interactive browser) and the Loopy hand-off (Inner Loop 1,
-Steps 4–7). See [docs/loop-engineering.md](docs/loop-engineering.md) for the live
-status board.
+✅ **Inner Loop 1 complete.** The Forge + Loopy code is committed in-tree and wired
+to its real entrypoints (server on 8099, `harness/main.py` distiller,
+`forge/.env.local` config). Two end-to-end runs on different workflows produced
+clean, site-agnostic `SKILL.md` files — see [`examples/login-flow/`](examples/login-flow/)
+and [`examples/form-fill/`](examples/form-fill/). All Inner Loop 1 success criteria
+are met.
+
+▶️ **Next: Inner Loop 2** — bind a distilled `SKILL.md` to a Loopy loop
+(`integration/core`: parse skill → catalog → governed run). See
+[docs/loop-engineering.md](docs/loop-engineering.md) for the status board and debrief.

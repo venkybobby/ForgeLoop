@@ -40,7 +40,7 @@ Loopy-ready `SKILL.md`.
 | 4 | Test recording + distillation | ✅ done | **Live end-to-end run**: `python -m harness.main full --track-file examples/login-flow/trace.json` → 1 track ingested → 1 segment classified (`login-with-credentials`) → 1 bucket → 1 skill distilled (`claude-haiku-4-5`, 635 in / 5329 out). Output in [`examples/login-flow/`](../examples/login-flow/). Server boot + panel + `/api/buckets` also verified. |
 | 5 | Quality check + improve prompts | ✅ done | `SKILL.md` passes the full [forge-setup.md](forge-setup.md) checklist (clear goal, atomic ordered steps, concrete-but-generalized selectors, **no leaked credentials**, Loopy-followable). Contract pinned in [architecture.md](architecture.md). Prompt in `forge/harness/distiller.py` if quality needs raising (e.g. re-distill with Opus). |
 | 6 | Documentation | ✅ done | `forge-setup.md`, `loopy-setup.md`, `architecture.md`, this file — all corrected to reality. |
-| 7 | Debrief + lock loop | 🔶 1 of 2 | First end-to-end run is clean and passes the checklist (login-flow). One more run with a *different* workflow (e.g. form-fill) locks the loop. |
+| 7 | Debrief + lock loop | ✅ done | **2 of 2** distinct workflows distilled cleanly: `login-flow` (`login-with-credentials`) and `form-fill` (`fill-and-submit-form`). Both pass the checklist; classifier distinguishes the capabilities. Loop locked — see debrief below. |
 
 ### Blocker — resolved
 
@@ -72,13 +72,38 @@ clone is runnable with no external repo access.
   in the web environment and the first Anthropic key was out of credits. Once a
   funded, allowlisted key was in place, the run was one command.
 
-### Remaining to lock the loop (Step 7)
+### Loop locked — Step 7 debrief
 
-1. ✅ Run #1: login-flow → clean `SKILL.md` (done, committed).
-2. ⏳ Run #2: a *different* workflow (e.g. `examples/form-fill/`) → confirm it also
-   passes the [forge-setup.md](forge-setup.md) checklist.
-3. Optional: re-distill login-flow with Opus and diff against the Haiku version to
-   gauge the quality/cost tradeoff before standardizing a model.
+Two end-to-end runs on different workflows, both clean:
+
+| Run | Workflow | Capability | Model | Tokens (in/out) | Result |
+|---|---|---|---|---|---|
+| 1 | `examples/login-flow` | `login-with-credentials` | `claude-haiku-4-5` | 635 / 5329 | ✅ passes checklist; no leak |
+| 2 | `examples/form-fill` | `fill-and-submit-form` | `claude-haiku-4-5` | 697 / 6983 | ✅ passes checklist; see note |
+
+**Inner Loop 1 success criteria are all met.** Forge records (or accepts a
+human-track), the harness distills, and the output is a clean, site-agnostic,
+Loopy-ready `SKILL.md`.
+
+**Findings carried forward:**
+
+1. **Redaction happens at the recorder, not the harness.** Run #2's skill echoed
+   two synthetic values (`Jane Doe`, `jane@example.com`) into an *example
+   scenario* because the hand-authored trace skipped the extension's redactor
+   (`forge/extension/src/redaction/`). Not a secret (fake data + reserved domain),
+   but the rule is: **hand-authored traces must not contain real PII**; the live
+   recording path strips it at capture.
+2. **Haiku is good enough for first-pass skills** at ~6k tokens/skill (well under a
+   cent). A small loop worth running later: re-distill with Opus and diff, to
+   decide the default `SF_DISTILL_MODEL` before scaling.
+3. **Reachability, not code, was the only blocker.** The web environment's egress
+   policy blocks non-allowlisted LLM hosts (NVIDIA); use an allowlisted, funded
+   endpoint (Anthropic) or run distillation outside the sandbox.
+
+### Next loop (Inner Loop 2 — handoff to Loopy)
+
+Bind a distilled `SKILL.md` to a Loopy loop (`integration/core`: parse skill →
+catalog → governed run) and add the `loop.md` for each example.
 
 ---
 
