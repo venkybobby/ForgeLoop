@@ -1,0 +1,50 @@
+# ===========================================================================
+# ForgeLoop — local self-hosted stack.
+#
+# This compose file wires the subsystems together for local development.
+# The `forge` and `loopy` build contexts come from the VENDORED code pulled by
+# `scripts/vendor.sh`, so run that first. Services are commented-in as each
+# subsystem's Dockerfile is confirmed during Inner Loop 1 — see
+# docs/loop-engineering.md. Uncomment a service once its build context exists.
+# ===========================================================================
+version: "3.9"
+
+services:
+  # --- Forge ingestion server: receives recordings from the extension ---
+  # forge-server:
+  #   build:
+  #     context: ./forge/server
+  #   env_file: .env
+  #   ports:
+  #     - "${FORGE_SERVER_PORT:-4000}:4000"
+  #   volumes:
+  #     - ./.data/forge:/data
+  #   restart: unless-stopped
+
+  # --- Forge distillation harness: recording -> SKILL.md ---
+  # forge-harness:
+  #   build:
+  #     context: ./forge/harness
+  #   env_file: .env
+  #   volumes:
+  #     - ./.data/forge:/data
+  #     - ./.data/skills:/skills
+  #   depends_on:
+  #     - forge-server
+
+  # --- Integration dashboard: skills + loops + runs UI ---
+  # dashboard:
+  #   build:
+  #     context: ./integration/dashboard
+  #   env_file: .env
+  #   ports:
+  #     - "${DASHBOARD_PORT:-3000}:3000"
+  #   volumes:
+  #     - ./.data:/data
+  #   depends_on:
+  #     - forge-server
+
+# volumes:
+#   forge-data:
+#   skills:
+#   runs:
