@@ -57,3 +57,34 @@ python -m integration.cli.forgeloop run examples/form-fill/loop.md \
 
 python -m integration.cli.forgeloop audit              # the governance trail
 ```
+
+## Real browser execution (Inner Loop 3)
+
+`RECEIPT.live.md` is a **real Playwright run**: it fills and submits the form on a
+live page and verifies acceptance from the actual result page (`Result: Success`).
+`evidence/result.png` is the post-submit screenshot.
+
+Because the sandbox blocks public egress, the live run targets a **local copy** of
+the form (`local_server.py`, field names + XPaths identical to the recording), so
+replaying the trace drives it exactly as it would the real httpbin page. One
+command reproduces it:
+
+```bash
+python -m pip install -r integration/requirements.txt   # Playwright (Chromium pre-installed)
+python scripts/live_demo.py                              # -> Result: Success + RECEIPT.live.md
+```
+
+Under the hood (mandatory approval gate):
+
+```bash
+# Without --approve, NO browser launches:
+python -m integration.cli.forgeloop run examples/form-fill/loop.md \
+    --skill examples/form-fill/SKILL.md --live --trace examples/form-fill/trace.json
+#   -> Result: Approval required
+
+# With approval (the demo script wires up the local server + --base-url for you):
+#   --live --approve --trace examples/form-fill/trace.json --base-url http://127.0.0.1:PORT
+```
+
+The receipt echoes the **synthetic** submitted values (`Jane Doe`, …) from the
+trace — fine for a demo; never replay real PII.

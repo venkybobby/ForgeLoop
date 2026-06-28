@@ -82,25 +82,35 @@ the goal, success criteria, and step plan.
 
 ## Status
 
-✅ **Inner Loops 1 & 2 complete.**
+✅ **Inner Loops 1–3 complete** — record → distill → govern → **run for real**.
 
-- **Loop 1 (Forge):** code committed in-tree and wired to real entrypoints; two
-  workflows distilled into clean, site-agnostic `SKILL.md` files.
-- **Loop 2 (integration):** the glue layer is implemented in `integration/` — a
-  distilled `SKILL.md` is bound into a governed Loopy `loop.md` and run in bounded
-  passes with an **approval gate**, producing a Loopy-format **receipt** and an
-  **audit trail**.
+- **Loop 1 (Forge):** code committed in-tree; two workflows distilled into clean,
+  site-agnostic `SKILL.md` files.
+- **Loop 2 (integration):** a distilled `SKILL.md` is bound into a governed Loopy
+  `loop.md` and run in bounded passes with an **approval gate**, producing a
+  Loopy-format **receipt** + an **audit trail**.
+- **Loop 3 (real execution):** an *approved* run drives a **real browser**
+  (Playwright) and reaches a real terminal state from live page content.
 
 ```bash
 # skill -> governed loop -> bounded run -> receipt
 python -m integration.cli.forgeloop bind examples/form-fill/SKILL.md --out examples/form-fill/loop.md
 python -m integration.cli.forgeloop run  examples/form-fill/loop.md --skill examples/form-fill/SKILL.md
-python -m integration.cli.forgeloop audit
+python -m integration.cli.forgeloop status
+
+# real browser run (mandatory approval; replays the recording against a live page)
+python -m pip install -r integration/requirements.txt
+python scripts/live_demo.py          # form-fill -> Result: Success (+ screenshot)
 ```
 
-See [`examples/form-fill/`](examples/form-fill/) (loop.md + RECEIPT.md) and
+See [`examples/form-fill/`](examples/form-fill/) — `loop.md`, `RECEIPT.md`
+(approval gate) and `RECEIPT.live.md` (real `Success` run) — and
 [`examples/login-flow/`](examples/login-flow/).
 
-▶️ **Next: Inner Loop 3** — a real browser executor (Playwright MCP) behind the
-approval gate so an approved run acts for real, plus a catalog of bound loops. See
-[docs/loop-engineering.md](docs/loop-engineering.md) for the status board and debrief.
+> **Sandbox note:** this environment blocks public network egress, so the live
+> demo serves the target form locally; the mechanism is identical for a reachable
+> public site (only `--base-url`/DNS changes).
+
+▶️ **Next:** an LLM-driven executor (choose the next action against novel DOM
+instead of replaying), a skill **catalog**, and a **dashboard**. See
+[docs/loop-engineering.md](docs/loop-engineering.md).

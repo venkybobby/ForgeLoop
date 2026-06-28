@@ -9,7 +9,8 @@ Inner Loop 2.
 | File | What it does |
 |---|---|
 | `skill_to_loop.py` | Parse a Forge `SKILL.md` (+ sibling `meta.json`) into a normalized `Skill`, then render a `loop.md` mapped onto Loopy's feedback cycle. Deterministic — no LLM. |
-| `loop_runner.py` | Execute a `loop.md` in bounded passes with an **approval gate**, ending at a named Loopy terminal state. Delegates real browser actions to a pluggable `executor`. |
+| `loop_runner.py` | Execute a `loop.md` in bounded passes with an **approval gate**, ending at a named Loopy terminal state. `run_loop` (gate/simulate) and `run_live` (real browser). |
+| `browser_executor.py` | **Real** browser actions via Playwright (navigate/click/fill/observe) over the pre-installed Chromium; `actions_from_trace()` replays a recording. |
 | `receipt.py` | The evidence-backed run receipt, in Loopy's `references/run.md` format. |
 
 ## The `Skill` record (parsed from SKILL.md)
@@ -56,9 +57,13 @@ python -m integration.core.loop_runner examples/form-fill/loop.md \
 # 2b. Walk the full feedback cycle with a side-effect-free simulated executor
 python -m integration.core.loop_runner examples/form-fill/loop.md \
     --skill examples/form-fill/SKILL.md --simulate
+
+# 2c. REAL browser run (Inner Loop 3) — mandatory approval; replays the trace
+python -m pip install -r integration/requirements.txt   # Playwright (Chromium pre-installed)
+python scripts/live_demo.py                              # -> Result: Success (+ RECEIPT.live.md, screenshot)
 ```
 
-Or via the single CLI: `python -m integration.cli.forgeloop {bind,run,audit}`.
+Or via the single CLI: `python -m integration.cli.forgeloop {bind,run,audit,status}`.
 
 ## Terminal states (never report an error as success)
 
@@ -69,5 +74,7 @@ not a failure.
 
 ## Not yet (next loops)
 
-- A real browser `executor` (e.g. Playwright MCP) so an approved run acts for real.
-- A catalog/registry of bound loops and a watcher over `FORGE_SKILLS_DIR`.
+- A skill **catalog/registry** of bound loops and a watcher over `FORGE_SKILLS_DIR`.
+- A web **dashboard** to browse skills, loops, and runs.
+- Live execution against **public** sites (the sandbox blocks egress, so the live
+  demo serves the target locally; the mechanism is identical for a reachable site).

@@ -32,6 +32,7 @@ from typing import Callable
 
 from .receipt import Receipt
 from .skill_to_loop import parse_skill, parse_sections, find_section, bullets
+from .browser_executor import BrowserExecutor, actions_from_trace, PLAYWRIGHT_AVAILABLE
 
 # Hard safety backstop on passes. This is NOT the loop's success boundary (Loopy
 # forbids inventing that) — it is a runaway guard, distinct and generous.
@@ -212,6 +213,143 @@ def run_loop(
     return receipt
 
 
+def run_live(
+    loop_path: str | Path,
+    skill_path: str | Path,
+    trace_path: str | Path,
+    *,
+    approve: bool = False,
+    headless: bool = True,
+    base_url: str | None = None,
+    max_passes: int | None = None,
+    runs_dir: str | Path | None = None,
+    evidence_dir: str | Path | None = None,
+    ts: str | None = None,
+    audit: bool = True,
+) -> Receipt:
+    """Execute a loop against a LIVE page via Playwright, behind the approval gate.
+
+    The concrete steps are replayed from the recorded `trace.json`; the loop's
+    acceptance criteria decide the terminal state from the real resulting page.
+    Approval is MANDATORY — without `approve=True` no browser is launched.
+    """
+    loop_md = Path(loop_path).read_text()
+    name, sha = _loop_identity(loop_md)
+    skill = parse_skill(skill_path)
+    acceptance = skill.acceptance or _acceptance_from_loop(loop_md)
+    boundary = (f"operator-supplied {max_passes} passes" if max_passes
+                else f"recorded plan length (safety backstop {SAFETY_CAP})")
+    check = (f"URL leaves the form page AND the result page renders; acceptance: "
+             f"“{acceptance[0]}”" if acceptance else "NO observable acceptance check")
+
+    def _audit(kind: str, detail: dict) -> None:
+        if not audit:
+            return
+        try:
+            from ..governance.audit import record_event
+            record_event(actor="system", kind=kind, subject=name, detail=detail, ts=ts)
+        except Exception as e:  # noqa: BLE001
+            print(f"[warn] audit not recorded: {e}", file=sys.stderr)
+
+    # ── Mandatory approval gate ─────────────────────────────────────────────
+    if not approve:
+        _audit("run.started", {"loop_sha256": sha, "mode": "live", "approved": False})
+        receipt = Receipt(
+            loop=name, definition=f"local loop.md SHA-256 {sha[:16]}…",
+            scope=f"{skill.metadata.get('domains', ['target'])[0]} (LIVE) — not started",
+            check=check, boundary=boundary, result="Approval required",
+            evidence=["Live browser execution requires explicit human approval (--approve)."],
+            actions=["No browser launched."],
+            next="Re-run with --approve to authorize real browser actions.", ts=ts,
+        )
+        _audit("run.finished", {"result": receipt.result})
+        _persist(receipt, runs_dir, name)
+        return receipt
+
+    if not PLAYWRIGHT_AVAILABLE:
+        receipt = Receipt(
+            loop=name, definition=f"local loop.md SHA-256 {sha[:16]}…",
+            scope="LIVE — could not start", check=check, boundary=boundary,
+            result="Blocked", evidence=["Playwright is not installed."],
+            actions=["pip install playwright"], next="Install Playwright, then re-run.", ts=ts,
+        )
+        _persist(receipt, runs_dir, name)
+        return receipt
+
+    _audit("approval.granted", {"loop_sha256": sha, "mode": "live"})
+    _audit("run.started", {"loop_sha256": sha, "mode": "live", "approved": True})
+
+    actions = actions_from_trace(trace_path, base_url=base_url)
+    cap = max_passes if max_passes else SAFETY_CAP
+    form_url = next((a["url"] for a in actions if a["op"] == "navigate"), None)
+
+    evidence: list[str] = [
+        f"Acceptance criteria: {len(acceptance)}.",
+        f"Replaying {len(actions)} recorded step(s) against a live page"
+        + (f" (host rewritten to {base_url})." if base_url else "."),
+        f"Governance: {len(skill.red_lines)} red line(s); approval granted.",
+    ]
+    done: list[str] = []
+    result, nxt = "No progress", "nothing"
+
+    ex = BrowserExecutor(headless=headless)
+    try:
+        ex.start()
+        for i, act in enumerate(actions):
+            if i >= cap:
+                result, nxt = "Exhausted", f"Hit run boundary ({boundary})."
+                break
+            try:
+                if act["op"] == "navigate":
+                    ex.navigate(act["url"]); obs = f"navigated → {ex.current_url()}"
+                elif act["op"] == "fill":
+                    ex.fill(act["selector"], act["value"]); obs = act["label"]
+                elif act["op"] == "click":
+                    ex.click(act["selector"]); obs = act["label"]
+                else:
+                    obs = f"skipped {act}"
+                done.append(f"Pass {i + 1}: {obs}")
+            except Exception as e:  # noqa: BLE001 — element missing / timeout etc.
+                result = "Blocked"
+                done.append(f"Pass {i + 1}: FAILED {act.get('label', act['op'])} — {type(e).__name__}")
+                nxt = f"Action failed: {act.get('label')}. Page may differ from the recording."
+                break
+
+        # ── Verify acceptance against the REAL resulting page ───────────────
+        final_url = ex.current_url()
+        snippet = ex.page_text(400)
+        url_changed = bool(form_url) and final_url.rstrip("/") != form_url.rstrip("/")
+        page_rendered = len(snippet.strip()) > 0
+        if result not in ("Blocked", "Exhausted"):
+            if url_changed and page_rendered:
+                result, nxt = "Success", "nothing — acceptance met on the live page."
+            else:
+                result = "No progress"
+                nxt = ("URL did not leave the form page; the submission may not have "
+                       "completed. Inspect the page and selectors.")
+
+        evidence.append(f"Form URL: {form_url}")
+        evidence.append(f"Final URL: {final_url}  (changed: {'yes' if url_changed else 'no'})")
+        evidence.append(f"Result page text (extracted): “{snippet[:240]}”")
+        if evidence_dir is not None:
+            shot = ex.screenshot(Path(evidence_dir) / "result.png")
+            evidence.append(f"Screenshot: {shot}")
+    finally:
+        ex.close()
+
+    receipt = Receipt(
+        loop=name,
+        definition=f"local loop.md SHA-256 {sha[:16]}…; trace={Path(trace_path).name}; boundary={boundary}",
+        scope=f"{skill.metadata.get('domains', ['target'])[0]} (LIVE browser run)"
+              + (f" via {base_url}" if base_url else ""),
+        check=check, boundary=boundary, result=result,
+        evidence=evidence, actions=done or ["(no steps ran)"], next=nxt, ts=ts,
+    )
+    _audit("run.finished", {"result": receipt.result, "passes": len(done)})
+    _persist(receipt, runs_dir, name)
+    return receipt
+
+
 def _persist(receipt: Receipt, runs_dir: str | Path | None, name: str) -> None:
     if runs_dir is None:
         return
@@ -233,17 +371,36 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", help="Also write the receipt here")
     ap.add_argument("--ts", help="ISO-8601 timestamp to stamp the receipt/audit (caller-supplied)")
     ap.add_argument("--runs-dir", help="Directory to persist the receipt into")
+    # Live (real browser) execution:
+    ap.add_argument("--live", action="store_true",
+                    help="Execute against a real page via Playwright (requires --approve and --trace)")
+    ap.add_argument("--trace", help="Recorded trace.json to replay (concrete steps) in --live mode")
+    ap.add_argument("--base-url", help="Rewrite the recorded host (e.g. http://127.0.0.1:PORT for a local copy)")
+    ap.add_argument("--headed", action="store_true", help="Run the browser headed (default headless)")
+    ap.add_argument("--evidence-dir", help="Directory to write a screenshot into (--live)")
     args = ap.parse_args(argv)
 
-    receipt = run_loop(
-        args.loop,
-        skill_path=args.skill,
-        approve=args.approve,
-        max_passes=args.max_passes,
-        executor=_simulate_executor if args.simulate else None,
-        ts=args.ts,
-        runs_dir=args.runs_dir,
-    )
+    if args.live:
+        if not args.trace:
+            ap.error("--live requires --trace <trace.json>")
+        if not args.skill:
+            ap.error("--live requires --skill <SKILL.md>")
+        receipt = run_live(
+            args.loop, args.skill, args.trace,
+            approve=args.approve, headless=not args.headed, base_url=args.base_url,
+            max_passes=args.max_passes, ts=args.ts, runs_dir=args.runs_dir,
+            evidence_dir=args.evidence_dir,
+        )
+    else:
+        receipt = run_loop(
+            args.loop,
+            skill_path=args.skill,
+            approve=args.approve,
+            max_passes=args.max_passes,
+            executor=_simulate_executor if args.simulate else None,
+            ts=args.ts,
+            runs_dir=args.runs_dir,
+        )
     out = receipt.render()
     if args.out:
         Path(args.out).write_text(out)

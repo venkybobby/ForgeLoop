@@ -151,11 +151,58 @@ in [architecture.md](architecture.md) / `integration/core/README.md`.
   `./.data/` (gitignored); the *example* `loop.md`/`RECEIPT.md` are committed as
   reference artifacts.
 
-### Next (Inner Loop 3)
+---
 
-A real browser **executor** (Playwright MCP) behind the approval gate so an
-approved run acts for real and reaches `Success`/`No progress` on live evidence,
-plus a small **catalog** of bound loops.
+## Inner Loop 3 — Real browser execution
+
+**Goal:** an *approved* loop performs real actions on a live page (Playwright) and
+reaches a real terminal state from actual page content.
+
+### Success criteria
+
+- [x] Browser executor module with navigate/click/fill/observe over the
+  pre-installed Chromium (`integration/core/browser_executor.py`).
+- [x] Real execution integrated into the runner (`run_live`) behind the approval
+  gate; `--simulate` retained for safe testing.
+- [x] CLI exposes `run --live --approve --trace …` and `status`.
+- [x] Approval is **mandatory** for live actions and is **audited**
+  (`approval.granted`); no approval ⇒ no browser launched.
+- [x] End-to-end on form-fill: fills + submits the order form on a live page and
+  reaches `Success` from the real result page, with a receipt + screenshot.
+- [x] Error handling: missing element ⇒ `Blocked`; submission that doesn't leave
+  the form ⇒ `No progress`.
+- [x] Runtime data stays gitignored (`./.data/`); example evidence is committed.
+
+### What landed
+
+| Piece | Where |
+|---|---|
+| Playwright browser executor + trace→action replay | `integration/core/browser_executor.py` |
+| `run_live` (approval-gated real run) + live CLI flags + `status` | `integration/core/loop_runner.py`, `integration/cli/forgeloop.py` |
+| Reproducible live demo (local form server + one-command run) | `examples/form-fill/local_server.py`, `scripts/live_demo.py` |
+| Real receipt + screenshot | `examples/form-fill/RECEIPT.live.md`, `examples/form-fill/evidence/result.png` |
+
+### Verified terminal states (real runs)
+
+- **Success** — live form-fill: 11 recorded steps replayed → navigates to the
+  result page → acceptance met; receipt extracts *"Order received — thank you!…"*.
+- **Approval required** — `--live` without `--approve` launches no browser.
+- **Blocked** — a page missing the recorded fields → `TimeoutError` on the first
+  fill, surfaced with the failing action.
+
+### Debrief
+
+- _What worked:_ the recording is the ground truth of *what* to do and the
+  `loop.md` is the policy for *whether/when* — so a deterministic replay reaches a
+  genuine terminal state with no agent/LLM in the execution path. The approval gate
+  makes "do nothing without a human" the default.
+- _Honest boundary:_ the sandbox **blocks public egress**, so the live target is a
+  **locally-served** faithful copy of the form (identical field names/XPaths). The
+  `run_live` mechanism is identical for a reachable public site — only the
+  `--base-url` (or DNS reachability) changes.
+- _Not agentic yet:_ execution replays a recorded plan rather than an LLM choosing
+  the next action against novel DOM. That (and a skill **catalog** + **dashboard**)
+  is the next layer.
 
 ---
 

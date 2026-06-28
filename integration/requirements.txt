@@ -1,0 +1,8 @@
+# integration layer — Python deps.
+#
+# core / governance / cli are stdlib-only (no install needed).
+# Only LIVE browser execution (loop_runner --live, browser_executor.py) needs
+# Playwright. This sandbox ships Chromium at $PLAYWRIGHT_BROWSERS_PATH, so you do
+# NOT need to run `playwright install` — just:
+#     python -m pip install -r integration/requirements.txt
+playwright>=1.40

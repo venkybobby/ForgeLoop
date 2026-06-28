@@ -23,7 +23,12 @@ layer that reads those files and drives bounded runs.
 ```bash
 python -m integration.cli.forgeloop bind examples/form-fill/SKILL.md --out examples/form-fill/loop.md
 python -m integration.cli.forgeloop run  examples/form-fill/loop.md --skill examples/form-fill/SKILL.md
-python -m integration.cli.forgeloop audit
+python -m integration.cli.forgeloop status        # run results from the audit trail
+python -m integration.cli.forgeloop audit         # full governance trail
+
+# Real browser execution (Inner Loop 3) — mandatory approval, replays the recording:
+python -m pip install -r integration/requirements.txt
+python scripts/live_demo.py                        # form-fill -> Result: Success (+ screenshot)
 ```
 
 ## Data flow
