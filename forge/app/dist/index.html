@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Journey Forge Local</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--fg:#e6e9ef;--mut:#9aa3b2;--acc:#5b8cff;--ok:#3ecf8e;--warn:#e0b341;--err:#e0584b}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg);min-width:760px}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px}
+  header .inner,nav .inner{max-width:1000px;margin:0 auto;width:100%;display:flex;align-items:center;gap:14px}
+  header h1{font-size:16px;margin:0;font-weight:650}
+  header .sp{flex:1}
+  .keybox{display:flex;gap:6px;align-items:center;color:var(--mut)}
+  .keybox input{width:190px;background:var(--bg);border:1px solid var(--line);color:var(--fg);padding:5px 8px;border-radius:6px}
+  nav{padding:10px 20px 0}
+  nav .inner{gap:4px}
+  nav button{background:none;border:none;color:var(--mut);padding:8px 14px;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px}
+  nav button.on{color:var(--fg);background:var(--panel)}
+  main{padding:18px 20px;max-width:1000px;margin:0 auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+  .card h2{margin:0 0 8px;font-size:14px;font-weight:600;color:var(--fg)}   /* section heading */
+  .sub{font-size:13px;font-weight:600;color:var(--fg);margin:14px 0 6px}    /* sub-heading */
+  .card p{font-size:12px;line-height:1.5;margin:6px 0}                      /* body */
+  .meta{color:var(--mut);font-size:12px;margin:4px 0}                       /* small meta = body size */
+  .site h3{margin:14px 0 8px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .site h3 .dom{font-family:ui-monospace,Menlo,monospace}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle;word-break:break-word}
+  th{color:var(--mut);font-weight:600;font-size:12px}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;border:1px solid var(--line);white-space:nowrap}
+  .pill.ok{color:var(--ok);border-color:var(--ok)} .pill.run{color:var(--warn);border-color:var(--warn)}
+  .pill.err{color:var(--err);border-color:var(--err)} .pill.mut{color:var(--mut)}
+  .cap{font-weight:600} .desc{color:var(--mut);font-size:12px;margin-top:2px}
+  button.act,button.ghost,button.danger{height:30px;padding:0 13px;border-radius:9px;cursor:pointer;font-size:12px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;line-height:1;white-space:nowrap}
+  /* All buttons share the quiet outlined look (no loud filled accent). */
+  button.act,button.ghost{background:none;border:1px solid var(--line);color:var(--fg)}
+  button.act:hover,button.ghost:hover{border-color:var(--mut)}
+  button.danger{background:none;border:1px solid var(--err);color:var(--err)}
+  button:disabled{opacity:.45;cursor:default}
+  label{display:block;color:var(--mut);font-size:12px;margin:10px 0 4px}
+  input[type=text],input[type=password],select{width:100%;max-width:520px;background:var(--bg);border:1px solid var(--line);color:var(--fg);padding:8px 10px;border-radius:7px}
+  code,pre{font-family:ui-monospace,Menlo,monospace}
+  pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font-size:12px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .mut{color:var(--mut)} .ok{color:var(--ok)} .err{color:var(--err)}
+  .spin-s{display:inline-block;width:9px;height:9px;border:2px solid var(--line);border-top-color:var(--warn);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .toast{position:fixed;right:18px;bottom:18px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--acc);padding:10px 14px;border-radius:8px;max-width:380px;opacity:0;transition:.2s;z-index:50}
+  .toast.show{opacity:1}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:40}
+  .overlay.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(820px,92vw);max-height:86vh;display:flex;flex-direction:column}
+  .modal header{justify-content:space-between}
+  .modal .body{overflow:auto;padding:0 16px 16px}
+  .sw{position:relative;display:inline-block;width:42px;height:24px;flex:none}
+  .sw input{opacity:0;width:0;height:0}
+  .sw .sl{position:absolute;inset:0;background:var(--line);border-radius:24px;transition:.2s;cursor:pointer}
+  .sw .sl:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked + .sl{background:var(--ok)}
+  .sw input:checked + .sl:before{transform:translateX(18px)}
+  .sw input:disabled + .sl{opacity:.5;cursor:default}
+  .toggle-row{display:flex;align-items:center;gap:10px;margin:10px 0}
+  .tip{position:relative;display:inline-block}
+  .tip .pop{display:none;position:absolute;right:0;top:calc(100% + 4px);width:240px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--fg);white-space:normal;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  .tip:hover .pop{display:block}
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>Journey Forge&nbsp;Local</h1>
+    <span class="pill mut" id="srv">Checking…</span>
+    <span class="pill mut" id="ver" title="running build">Build …</span>
+  </div>
+</header>
+<nav>
+  <div class="inner">
+    <button data-tab="skills" class="on">Skills &amp; trajectories</button>
+    <button data-tab="settings">Settings</button>
+  </div>
+</nav>
+<main id="main"></main>
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay"><div class="modal">
+  <header><strong id="m-title">SKILL.md</strong><button class="ghost" onclick="closeModal()">Close</button></header>
+  <div class="body"><pre id="m-body"></pre></div>
+</div></div>
+
+<script>
+const $ = (s,e=document)=>e.querySelector(s);
+const main = $('#main');
+let API_KEY = localStorage.getItem('jfl_api_key') || 'jfl-local-dev-key';
+
+function authHeaders(extra){return Object.assign({'Authorization':'Bearer '+API_KEY}, extra||{});}
+async function api(path, opts){
+  const o = Object.assign({headers:{}}, opts||{}); o.headers = authHeaders(o.headers);
+  const r = await fetch(path,o);
+  if(!r.ok){ const t=await r.text().catch(()=> ''); throw new Error(r.status+' '+t.slice(0,200)); }
+  const ct=r.headers.get('content-type')||''; return ct.includes('json')?r.json():r;
+}
+let toastT; function toast(m,err){const t=$('#toast');t.textContent=m;t.style.borderLeftColor=err?'var(--err)':'var(--acc)';t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3500);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function cap(s){s=String(s==null?'':s);return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+function pill(s){const m={accepted:'ok',done:'ok',running:'run',processing:'run',error:'err',degraded:'err'};return `<span class="pill ${m[s]||'mut'}">${esc(cap(s)||'-')}</span>`;}
+function openModal(title,body){$('#m-title').textContent=title;$('#m-body').textContent=body;$('#overlay').classList.add('show');}
+function closeModal(){$('#overlay').classList.remove('show');}
+$('#overlay').addEventListener('click',e=>{if(e.target===$('#overlay'))closeModal();});
+
+let TAB='skills';
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{TAB=b.dataset.tab;document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));refresh();}));
+async function pingServer(){try{await fetch('/');$('#srv').textContent='Server online';$('#srv').className='pill ok';}catch{$('#srv').textContent='Server offline';$('#srv').className='pill err';}}
+async function showVersion(){try{const r=await fetch('/api/version');const v=await r.json();$('#ver').textContent='Build '+(v.sha||'?');}catch{$('#ver').textContent='Build ?';}}
+async function refresh(){pingServer();try{await ({skills:tabSkills,settings:tabSettings}[TAB])();}catch(e){main.innerHTML=`<div class="card"><span class="err">${esc(e.message)}</span><p class="mut">If this is an auth error, set the server key in Settings.</p></div>`;}}
+
+// ── Skills & trajectories (combined preview) ─────────────────────────────────
+async function tabSkills(){
+  const [traj, buckets] = await Promise.all([api('/api/traj'), api('/api/buckets')]);
+  main.innerHTML = trajSection(traj) + bucketsSection(buckets);
+  if(traj.trajectories.some(t=>t.distill_status==='running')) setTimeout(()=>{ if(TAB==='skills') tabSkills(); }, 1200);
+}
+function bucketsSection(d){
+  if(!d.domains.length) return `<div class="card"><h2>Distilled skills</h2><p class="mut">No skills yet. Record a task with the extension — it distills automatically, and each capability becomes a skill under its website.</p></div>`;
+  const sites = d.domains.map(site=>{
+    const rows = site.buckets.map(b=>{
+      const status = b.distilled ? `<span class="pill ok">Distilled v${b.version}</span>` : `<span class="pill run">Pending</span>`;
+      const acts = b.distilled
+        ? `<button class="ghost" onclick="viewSkill('${esc(b.bucket_id)}')">View SKILL.md</button>`
+        : `<button class="ghost" disabled>View SKILL.md</button>`;
+      return `<tr>
+        <td><div class="cap">${esc(b.capacity)}</div><div class="desc">${esc(b.description||b.scope||'')}</div>
+            ${b.skill_name?`<div class="meta">Installed: ${esc(b.skill_name)}</div>`:''}</td>
+        <td style="text-align:center">${b.segments}</td><td style="text-align:center">${status}</td><td>${acts}</td></tr>`;
+    }).join('');
+    return `<div class="site"><h3><span class="dom">${esc(site.domain||'(unknown site)')}</span>
+        <span class="pill mut">${site.buckets.length} capabilit${site.buckets.length===1?'y':'ies'}</span></h3>
+      <table><thead><tr><th>Capability</th><th style="width:90px;text-align:center">Segments</th><th style="width:130px;text-align:center">Status</th><th style="width:160px"></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+  return `<div class="card"><h2>Distilled skills</h2>
+    <p class="mut">Each website accumulates a bucket of capabilities. Every recorded task is atomized into segments, classified into a capability, and distilled into one reusable skill per capability.</p>
+    ${sites}</div>`;
+}
+window.viewSkill = async (bucket)=>{ try{ const r=await api('/api/skill?bucket='+encodeURIComponent(bucket)); openModal(bucket, r.skill_md); }catch(e){ toast(e.message,true);} };
+
+const PHASE_LABEL={ingest:'Atomizing',classify:'Classifying',bucket:'Bucketing',distill:'Distilling',install:'Installing',done:'Done',error:'Error'};
+function progCell(t){
+  const p=t.progress;
+  const pillHtml=pill(t.distill_status);
+  if(!p) return pillHtml;
+  const frac=p.total?` ${p.current}/${p.total}`:'';
+  const label=(PHASE_LABEL[p.phase]||p.phase)+frac;
+  const full=label+(p.detail?` — ${p.detail}`:'');
+  const running=t.distill_status==='running';
+  // Pill in the cell; full progress detail in a hover popup (no inline text, so
+  // the row height stays stable and the table doesn't distort).
+  return `<span class="tip">${pillHtml}${running?' <span class="spin-s"></span>':''}<span class="pop">${esc(full)}</span></span>`;
+}
+function trajSection({trajectories}){
+  const rows = trajectories.map(t=>{
+    const note = t.note ? `<div class="meta" style="color:var(--warn);margin-top:3px">${esc(t.note)}</div>` : '';
+    return `<tr>
+      <td><strong>${esc(t.label||'(untitled)')}</strong><div class="desc">${esc(t.description||'')}</div>
+          <div class="meta">${esc(t.upload_id)} · ${esc((t.created_at||'').slice(0,19).replace('T',' '))} · ${t.n_chunks} chunk(s)</div>${note}</td>
+      <td>${pill(t.status)}</td><td>${progCell(t)}</td>
+      <td><button class="ghost" onclick="reprocess('${t.upload_id}')" ${t.distill_status==='running'?'disabled':''}>↻ Reprocess</button></td></tr>`;
+  }).join('');
+  return `<div class="card"><h2>Recorded trajectories</h2>
+    <p class="mut">Every recording is processed automatically on finalize — atomized into segments, classified, and distilled. Hover the Pipeline cell for live detail. Use Reprocess to re-run if a recording was interrupted or the LLM gateway was down.</p>
+    ${trajectories.length?`<table><thead><tr><th>Task</th><th style="width:110px">Upload</th><th style="width:130px">Pipeline</th><th style="width:140px"></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="mut">No trajectories yet — record one with the extension.</p>'}</div>`;
+}
+window.reprocess = async (id)=>{ try{ await api('/api/distill/'+id,{method:'POST'}); toast('Reprocessing…'); setTimeout(()=>{ if(TAB==='skills') tabSkills(); },800); }catch(e){ toast(e.message,true);} };
+
+// ── Settings (server key · LLM · agent connections · extension · logs) ───────
+async function tabSettings(){
+  // Server key first — it needs NO auth, so it stays editable even if the key is
+  // wrong (recovery). Everything below is loaded after and may fail independently.
+  main.innerHTML = `
+    <div class="card"><h2>Server key</h2>
+      <p class="mut">Access key for this control panel (sent as a Bearer token to the local server).</p>
+      <input id="s_serverkey" type="password" value="${esc(API_KEY)}" placeholder="jfl-local-dev-key" />
+      <div class="row" style="margin-top:10px"><button class="act" onclick="saveServerKey()">Apply key</button></div>
+    </div>
+    <div id="cfg_llm" class="card"><p class="mut">Loading LLM settings…</p></div>
+    <div id="cfg_agents" class="card"><p class="mut">Loading agent connections…</p></div>
+    <div id="cfg_ext" class="card"><p class="mut">Loading extension status…</p></div>
+    <div id="cfg_logs" class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Logs</h2>
+        <button class="ghost" onclick="loadLogs()">Refresh</button>
+      </div>
+      <p class="meta" id="log_path"></p>
+      <pre id="log_box" style="max-height:340px">loading…</pre>
+    </div>`;
+  renderLlmSettings();
+  renderAgents();
+  renderExtension();
+  loadLogs();
+  // Logs auto-refresh by default while on Settings.
+  clearInterval(_logTimer);
+  _logTimer=setInterval(()=>{ if(TAB==='settings') loadLogs(); else clearInterval(_logTimer); }, 2000);
+}
+let _logTimer=null;
+window.loadLogs = async ()=>{
+  try{ const r=await api('/api/logs'); const box=$('#log_box'); if(!box) return;
+    box.textContent = r.log || '(empty)'; box.scrollTop = box.scrollHeight;
+    const p=$('#log_path'); if(p) p.textContent = r.path||'';
+  }catch(e){ const box=$('#log_box'); if(box) box.textContent = e.message; }
+};
+window.saveServerKey = ()=>{ API_KEY=$('#s_serverkey').value.trim(); localStorage.setItem('jfl_api_key',API_KEY); toast('Server key applied'); refresh(); };
+
+async function renderLlmSettings(){
+  let c; try{ c = await api('/api/config'); }
+  catch(e){ $('#cfg_llm').innerHTML=`<h2>LLM</h2><span class="err">${esc(e.message)}</span><p class="mut">If this is an auth error, fix the Server key above and Apply.</p>`; return; }
+  $('#cfg_llm').innerHTML = `<h2>LLM &amp; distillation</h2>
+    <label>LLM API key ${c.llm_key_set?'<span class="ok">(set)</span>':'<span class="err">(not set — distillation will fail)</span>'}</label>
+    <input id="s_key" type="password" placeholder="sk-ant-… (leave blank to keep current)" />
+    <label>LLM base URL</label><input id="s_base" type="text" value="${esc(c.llm_base)}" />
+    <label>Distill model (writes the skill)</label><input id="s_model" type="text" value="${esc(c.distill_model)}" />
+    <label>Classify model (per-segment; blank = same as distill model)</label><input id="s_classify" type="text" value="${esc(c.classify_model||'')}" placeholder="blank = use distill model" />
+    <label>Min bucket size (segments needed before a capability distills)</label><input id="s_minbucket" type="text" value="${esc(c.min_bucket_size||1)}" />
+    <label>Skills root (Claude Code install target)</label><input id="s_root" type="text" value="${esc(c.skills_root)}" />
+    <div class="row" style="margin-top:14px"><button class="act" onclick="saveSettings()">Save</button></div>`;
+}
+window.saveSettings = async ()=>{
+  const body={
+    llm_base:$('#s_base').value, distill_model:$('#s_model').value,
+    classify_model:$('#s_classify').value, skills_root:$('#s_root').value,
+    min_bucket_size:parseInt($('#s_minbucket').value,10)||1,
+  };
+  const k=$('#s_key').value; if(k) body.llm_key=k;
+  try{ await api('/api/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('Saved'); renderLlmSettings(); }catch(e){ toast(e.message,true);} };
+
+// ── Agent connections (Claude Desktop + Codex share Node + the two toggles) ──
+function agentBlock(title, d, kind){
+  if(!d) return `<div class="sub">${title}</div><p class="mut">unavailable (check the server key)</p>`;
+  const pw = !!d.playwright_configured, sk = !!d.skills_mcp_configured;
+  const pwToggleable = d.node_found || pw;
+  const fn = kind==='claude' ? 'setMcp' : 'setCodexMcp';
+  return `
+    <div class="sub">${title}</div>
+    <div class="toggle-row">
+      <label class="sw"><input type="checkbox" ${pw?'checked':''} ${pwToggleable?'':'disabled'} onchange="${fn}(this.checked, ${sk})"><span class="sl"></span></label>
+      <div>Browser control (Playwright MCP) ${pw?'<span class="ok">on</span>':'<span class="mut">off</span>'}</div>
+    </div>
+    <div class="toggle-row">
+      <label class="sw"><input type="checkbox" ${sk?'checked':''} onchange="${fn}(${pw}, this.checked)"><span class="sl"></span></label>
+      <div>Distilled skills (<code>get_skill</code> MCP) ${sk?'<span class="ok">on</span>':'<span class="mut">off</span>'}</div>
+    </div>
+    <p class="meta">Config: <code>${esc(d.config_path)}</code>${d.config_exists===false?' (will be created)':''}</p>`;
+}
+async function renderAgents(){
+  const el=$('#cfg_agents'); if(!el) return;
+  let cd=null, cx=null;
+  try{ cd = await api('/api/desktop/config'); }catch(e){}
+  try{ cx = await api('/api/codex/config'); }catch(e){}
+  if(!cd && !cx){ el.innerHTML=`<h2>Agent connections</h2><span class="err">Could not load agent status — check the server key.</span>`; return; }
+  const nodeFound = (cd&&cd.node_found) || (cx&&cx.node_found);
+  const nodeVer = (cd&&cd.node_version) || (cx&&cx.node_version) || '';
+  const npx = (cd&&cd.npx_path) || '';
+  const nodeRow = nodeFound
+    ? `<span class="ok">Node ${esc(nodeVer)}</span> <code>${esc(npx)}</code>`
+    : `<span class="err">Node / npx not found</span> — required for browser control (Playwright)`;
+  const nodeBtn = nodeFound ? '' : `<button class="act" onclick="installNode()">Install Node (one-click)</button>`;
+  el.innerHTML = `<h2>Agent connections</h2>
+    <p class="mut">Let an agent drive the browser (Playwright) and pull your distilled skills (<code>get_skill</code>). Recording works without this — it only affects execution. Restart the agent once after changing a toggle.</p>
+    <p class="meta">Node: ${nodeRow}</p>
+    ${nodeBtn?`<div class="row" style="margin:6px 0">${nodeBtn}</div>`:''}
+    ${agentBlock('Claude Desktop', cd, 'claude')}
+    ${agentBlock('Codex', cx, 'codex')}`;
+}
+window.installNode = async ()=>{ toast('Downloading Node… (~30s)'); try{ const r=await api('/api/desktop/install-node',{method:'POST'}); toast('Node ready: '+(r.version||r.npx)); renderAgents(); }catch(e){ toast(e.message,true);} };
+window.setMcp = async (playwright, skills)=>{
+  try{ const r=await api('/api/desktop/mcp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({playwright,skills})}); toast(r.message); }
+  catch(e){ toast(e.message,true); }
+  renderAgents();
+};
+window.setCodexMcp = async (playwright, skills)=>{
+  try{ const r=await api('/api/codex/mcp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({playwright,skills})}); toast(r.message); }
+  catch(e){ toast(e.message,true); }
+  renderAgents();
+};
+
+// ── Extension management ──────────────────────────────────────────────────────
+async function renderExtension(){
+  let d; try{ d = await api('/api/ext'); }
+  catch(e){ $('#cfg_ext').innerHTML=`<h2>Extension</h2><span class="err">${esc(e.message)}</span>`; return; }
+  $('#cfg_ext').innerHTML = `<h2>Browser extension (the recorder)</h2>
+    <p class="mut">Until it is on the Chrome Web Store, loading is a quick one-time setup.</p>
+    <div class="row" style="margin:10px 0"><button class="ghost" onclick="extOpen()">Open Chrome + reveal folder</button></div>
+    <p class="mut">Then, in Chrome:</p>
+    <ol style="padding-left:20px;margin:6px 0">
+      <li style="margin:7px 0">Turn on <b>Developer mode</b> (toggle, top-right).</li>
+      <li style="margin:7px 0">Click <b>Load unpacked</b> and choose the folder that was just revealed.</li>
+      <li style="margin:7px 0">Done — the extension auto-connects to this app.</li>
+    </ol>
+    <p class="meta">Folder: <code>${esc(d.build_dir)}</code> · ${d.built?'<span class="ok">ready</span>':'<span class="err">missing</span>'}</p>`;
+}
+window.extOpen = async ()=>{ try{ await api('/api/ext/open',{method:'POST'}); toast('Opened chrome://extensions and revealed the folder — turn on Developer mode, then Load unpacked.'); }catch(e){ toast(e.message,true);} };
+
+refresh();
+showVersion();
+setInterval(pingServer,8000);
+</script>
+</body>
+</html>

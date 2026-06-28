@@ -21,46 +21,51 @@ Loopy-ready `SKILL.md`.
 
 ### Success criteria
 
-- [ ] ForgeLoop repo exists with the agreed structure.
-- [ ] Forge's extension + server + harness are integrated and runnable.
-- [ ] A user can record a workflow and get a clean `SKILL.md`.
+- [x] ForgeLoop repo exists with the agreed structure.
+- [x] Forge's extension + server + harness are integrated and runnable. *(code
+  committed in-tree, wired to real entrypoints; runs locally with Python + pnpm)*
+- [ ] A user can record a workflow and get a clean `SKILL.md`. *(needs a live
+  `SF_LLM_KEY` + an interactive browser — can't be exercised headlessly here)*
 - [ ] The skill is good enough to be consumed by Loopy.
-- [ ] Basic setup instructions exist.
+- [x] Basic setup instructions exist.
 
 ### Step status
 
 | # | Step | State | Notes |
 |---|------|-------|-------|
-| 1 | Create repo + structure | ✅ done | Scaffold, README, structure committed. |
-| 2 | Bring in Forge code | ⛔ blocked | `vendor.sh` ready, but Browser-BC is **403** in this access-scoped environment. Needs repo access or manual copy. |
-| 3 | Basic integration / setup scripts | ✅ done | `vendor.sh`, `setup-forge.sh`, `setup-loopy.sh`, `bootstrap.sh`. |
-| 4 | Test recording + distillation | ⏳ pending | Requires Step 2. |
-| 5 | Quality check + improve prompts | ⏳ pending | Requires Step 4. |
-| 6 | Documentation | ✅ done | `forge-setup.md`, `loopy-setup.md`, `architecture.md`, this file. |
+| 1 | Create repo + structure | ✅ done | Scaffold, README, structure. |
+| 2 | Bring in Forge code | ✅ done | Browser-BC committed to `forge/`, loopy to `loopy/` (135 + 53 files). Blocker resolved — this session has access to all three repos. |
+| 3 | Basic integration / setup scripts | ✅ done | `vendor.sh` (now a refresh tool), `setup-forge.sh`, `setup-loopy.sh`, `bootstrap.sh` — rewritten for the **real** Forge (pure-Python server/harness, pnpm extension). |
+| 4 | Test recording + distillation | ⏳ partial | Code runs; entrypoints pinned & docs corrected (port 8099, `python -m harness.main distill`, `forge/.env.local`). A live record→distill run still needs an LLM key + browser. |
+| 5 | Quality check + improve prompts | ⏳ pending | Requires a real distilled `SKILL.md` (Step 4 live run). Prompt lives in `forge/harness/distiller.py`. |
+| 6 | Documentation | ✅ done | `forge-setup.md`, `loopy-setup.md`, `architecture.md`, this file — all corrected to reality. |
 | 7 | Debrief + lock loop | ⏳ pending | Run end-to-end twice with different workflows. |
 
-### Current blocker
+### Blocker — resolved
 
-This development environment's GitHub access is **scoped to `venkybobby/forgeloop`
-only**. Cloning `venkybobby/Browser-BC` and `venkybobby/loopy` returns HTTP 403 at
-the proxy — forking did not change this, because the scope is enforced on the
-session token, not on repo ownership.
+The prior session's environment was **scoped to `forgeloop` only**, so it could not
+clone `Browser-BC` / `loopy` (HTTP 403) and chose to vendor on demand — which left
+`forge/` and `loopy/` empty and nothing runnable. **This session's access includes
+all three repos**, so the upstream code is now **committed in-tree** (one of the
+unblock options the original PR listed). ForgeLoop is now self-contained: a fresh
+clone is runnable with no external repo access.
 
-**To unblock Step 2, do one of:**
-- Add `Browser-BC` and `loopy` to the web environment's allowed-repo scope, then
-  re-run this session; or
-- Run `./scripts/vendor.sh` from a machine/environment that can reach those repos;
-  or
-- Push the Forge/Loopy code into `forgeloop` directly so it's in scope.
+### What worked / what was hard
 
-Everything that does **not** depend on the upstream code (structure, scripts,
-glue-layer design, docs) is complete and committed.
+- _What worked:_ committing the upstream code in-tree (it's small, no build
+  artifacts) makes the repo self-contained and immediately runnable; reading the
+  real harness/server pinned down the entrypoints the scaffold had only guessed.
+- _What was hard:_ the scaffold's docs/scripts assumed a Node-per-subsystem layout
+  and port 4000 / `ANTHROPIC_API_KEY`; the real Forge is pure-Python on port 8099
+  reading `SF_LLM_KEY` from `forge/.env.local`. All of that was corrected.
 
-### What worked / what was hard (fill in as we go)
+### Remaining to lock the loop
 
-- _What worked:_ scaffold + scripts + docs landed cleanly without the upstream code.
-- _What was hard:_ access scoping blocks vendoring the two source repos in this
-  environment.
+1. Set `SF_LLM_KEY` in `forge/.env.local`.
+2. `cd forge && ./scripts/start.sh`, load `forge/extension/dist/chrome-mv3`.
+3. Record two short workflows → confirm each yields a `SKILL.md` that passes the
+   [forge-setup.md](forge-setup.md) checklist.
+4. Tune `forge/harness/distiller.py` if quality is low; re-distill.
 
 ---
 

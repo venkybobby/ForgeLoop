@@ -1,9 +1,10 @@
-# --- Vendored upstream code (pulled by scripts/vendor.sh, not committed) ---
-/forge/*
-/loopy/*
-# ...but keep the tracked placeholders so the dirs and instructions survive.
-!/forge/README.md
-!/loopy/README.md
+# --- Upstream code lives in forge/ and loopy/ (committed in-tree). ---
+# scripts/vendor.sh refreshes them from upstream, but they are tracked here so
+# ForgeLoop is self-contained and runnable in access-scoped environments.
+# Only the runtime state the subsystems generate is ignored:
+/forge/.env.local
+/forge/data/
+/forge/extension/dist/
 
 # --- Environment / secrets ---
 .env
@@ -22,6 +23,9 @@ build/
 .next/
 .turbo/
 *.tsbuildinfo
+# ...but forge/app/dist/index.html is a committed zero-build panel, not output:
+!/forge/app/dist/
+!/forge/app/dist/**
 
 # --- Python ---
 __pycache__/
