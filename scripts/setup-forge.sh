@@ -3,54 +3,57 @@
 # setup-forge.sh — prepare Forge (recording + distillation) to run inside
 # ForgeLoop.
 #
-#   1. Verify forge/ has been vendored.
-#   2. Ensure .env exists (copy from .env.example if not).
-#   3. Install dependencies for each Forge subsystem that is present.
+#   1. Verify the Forge code is present in forge/.
+#   2. Create forge/.env.local from forge/config.example.env (the file Forge
+#      actually reads — server + harness + entry point).
+#   3. Install the Python runtime deps (Forge runs on pure Python).
+#   4. Build the Chrome extension if Node/pnpm is available (optional).
 #
-# Idempotent: safe to re-run. Detects Node (package.json) and Python
-# (requirements.txt / pyproject.toml) projects automatically.
+# Forge ("Journey Forge Local") is pure Python at runtime — the server and the
+# distillation harness need no Node. Node/pnpm is only used to BUILD the
+# recorder extension. Idempotent: safe to re-run.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# --- 1. Vendored? -----------------------------------------------------------
-if [ -z "$(find forge -mindepth 1 -maxdepth 1 ! -name README.md 2>/dev/null)" ]; then
-  echo "!! forge/ is empty. Run ./scripts/vendor.sh first." >&2
+# --- 1. Code present? -------------------------------------------------------
+if [ ! -f forge/requirements.txt ] || [ ! -f forge/server/server.py ]; then
+  echo "!! forge/ does not look like Browser-BC (missing requirements.txt or" >&2
+  echo "   server/server.py). It is committed in-tree; if you removed it, run" >&2
+  echo "   ./scripts/vendor.sh forge to refresh it from upstream." >&2
   exit 1
 fi
 
-# --- 2. .env ----------------------------------------------------------------
+# --- 2. forge/.env.local (Forge's own config) -------------------------------
+if [ ! -f forge/.env.local ]; then
+  echo "==> Creating forge/.env.local from forge/config.example.env"
+  cp forge/config.example.env forge/.env.local
+  echo "    Edit forge/.env.local and set SF_LLM_KEY=sk-ant-... before distilling."
+fi
+
+# ForgeLoop's own orchestration .env (ports, governance) — separate layer.
 if [ ! -f .env ]; then
   echo "==> Creating .env from .env.example"
   cp .env.example .env
-  echo "    Edit .env and set ANTHROPIC_API_KEY before distilling."
 fi
 
-# --- 3. Install deps per subsystem ------------------------------------------
-install_node() {
-  local dir="$1"
-  [ -f "$dir/package.json" ] || return 0
-  echo "==> [node] installing in $dir"
-  ( cd "$dir" && { command -v pnpm >/dev/null && pnpm install || npm install; } )
-}
+# --- 3. Python runtime deps -------------------------------------------------
+PY="${JFL_PYTHON:-python3}"
+echo "==> [python] installing forge/requirements.txt with $PY"
+"$PY" -m pip install -r forge/requirements.txt
 
-install_python() {
-  local dir="$1"
-  if [ -f "$dir/requirements.txt" ]; then
-    echo "==> [python] installing $dir/requirements.txt"
-    ( cd "$dir" && python3 -m pip install -r requirements.txt )
-  elif [ -f "$dir/pyproject.toml" ]; then
-    echo "==> [python] installing $dir (pyproject)"
-    ( cd "$dir" && python3 -m pip install -e . )
+# --- 4. Build the recorder extension (optional, needs Node/pnpm) ------------
+if [ -f forge/extension/package.json ]; then
+  if command -v pnpm >/dev/null 2>&1; then
+    echo "==> [node] building recorder extension (pnpm)"
+    ( cd forge/extension && pnpm install && pnpm build )
+    echo "    Load unpacked: forge/extension/dist/chrome-mv3"
+  else
+    echo "!! pnpm not found — skipping extension build." >&2
+    echo "   Install Node + pnpm, then: ( cd forge/extension && pnpm install && pnpm build )" >&2
   fi
-}
-
-for sub in forge/server forge/harness forge/app forge/extension; do
-  [ -d "$sub" ] || continue
-  install_node "$sub"
-  install_python "$sub"
-done
+fi
 
 echo "==> Forge setup complete. See docs/forge-setup.md to record your first workflow."

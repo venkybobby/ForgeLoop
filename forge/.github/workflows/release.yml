@@ -1,0 +1,107 @@
+# Release + in-app auto-update (GitHub).
+# Trigger: push a tag like `v0.1.0`. Builds the native macOS app (frozen Python
+# sidecar + Tauri shell), signs the updater artifacts, and publishes a GitHub
+# Release with `latest.json` — which the app's Tauri updater polls.
+#
+# One-time setup (repo → Settings → Secrets and variables → Actions):
+#   TAURI_SIGNING_PRIVATE_KEY           = contents of .updater-keys/jfl-updater.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  = (empty)
+# And set the updater endpoint in desktop/src-tauri/tauri.conf.json to this repo
+# (plugins.updater.endpoints → https://github.com/<owner>/<repo>/releases/latest/download/latest.json).
+#
+# NOTE: the macOS sidecar re-signing (disable-library-validation) vs the updater
+# .tar.gz needs one live verification on the first run — see docs/auto-update.md.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # create the Release
+
+jobs:
+  release-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Stamp build version
+        # tauri-action runs `tauri build` directly (not build-native-mac.sh), so
+        # stamp app/dist/build.json here — it gets bundled into the sidecar by the
+        # freeze step's --add-data and shown by the panel's "build" badge.
+        run: |
+          mkdir -p app/dist
+          printf '{"sha":"%s"}\n' "${{ github.ref_name }}" > app/dist/build.json
+
+      - name: Build extension
+        working-directory: extension
+        run: |
+          npx --yes pnpm@9 install --no-frozen-lockfile
+          npx --yes pnpm@9 run build
+
+      - name: Freeze the Python sidecar
+        run: |
+          python3 -m venv .build-venv
+          source .build-venv/bin/activate
+          pip install -q --upgrade pip
+          pip install -q -r requirements.txt pyinstaller
+          pyinstaller --noconfirm --clean --onefile --name jfl-server \
+            --paths "$PWD" --paths "$PWD/server" \
+            --add-data "app/dist:app/dist" \
+            --add-data "extension/dist/chrome-mv3:extension/dist/chrome-mv3" \
+            --collect-submodules harness \
+            --collect-submodules uvicorn \
+            --collect-submodules fastapi \
+            --hidden-import server \
+            --hidden-import skill_mcp \
+            --hidden-import tomli \
+            packaging/sidecar_main.py
+          TRIPLE="$(rustc -Vv | sed -n 's/^host: //p')"
+          mkdir -p desktop/src-tauri/binaries
+          cp dist/jfl-server "desktop/src-tauri/binaries/jfl-server-$TRIPLE"
+          # No ad-hoc pre-sign here: tauri-action signs the whole bundle (incl.
+          # this sidecar) with the Developer ID + entitlements below, then
+          # notarizes. An ad-hoc signature would fail notarization.
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm install
+
+      - name: Build, sign + notarize, publish Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Updater package signing (minisign).
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Key has an empty password (GitHub secrets can't be empty → inline "").
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          # Developer ID code signing (imported into a temp keychain by the action).
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Notarization (so Gatekeeper opens it with no "unidentified developer").
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: "Journey Forge Local ${{ github.ref_name }}"
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          # Per-build overrides live in a file (no spaces/escaping in YAML or the
+          # arg split). Enables createUpdaterArtifacts + Developer ID signing +
+          # entitlements only for the release build; local/GitLab/build.yml stay
+          # ad-hoc. See desktop/src-tauri/tauri.release.conf.json.
+          args: --config src-tauri/tauri.release.conf.json

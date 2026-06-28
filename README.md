@@ -27,16 +27,17 @@ run (Loopy loop)         ──►  governed runs + traces
 
 ```
 ForgeLoop/
-├── forge/          # Vendored from Browser-BC — recording + distillation
+├── forge/          # From Browser-BC — recording + distillation (pure Python runtime)
 │   ├── extension/  #   Chrome extension (recording)
-│   ├── server/     #   Ingestion server
+│   ├── server/     #   FastAPI ingestion + control API (port 8099)
 │   ├── harness/    #   Distillation pipeline (atomize → classify → bucket → distill)
-│   ├── app/        #   Control panel
+│   ├── app/        #   Zero-build control panel (served by the server)
+│   ├── entry/      #   Desktop entry point
 │   └── docs/
-├── loopy/          # Vendored from loopy — loop management
-│   ├── loop-library/  # Loop catalog + logic
-│   ├── skill/         # Loopy skill for agents
-│   └── docs/
+├── loopy/          # From loopy — loop library + agent skills
+│   ├── loop-library/  # Loop catalog + logic (+ optional Cloudflare worker)
+│   ├── skills/        # Loopy agent skills
+│   └── ...
 ├── integration/    # New code — the glue layer (most development happens here)
 │   ├── core/       #   Orchestration: skill → catalog → loop
 │   ├── dashboard/  #   Web UI (skills + loops + runs)
@@ -50,25 +51,23 @@ ForgeLoop/
 └── README.md
 ```
 
-> **`forge/` and `loopy/` are vendored, not committed.** Their contents are pulled
-> from the upstream forks by `scripts/vendor.sh`. Only a `README.md` placeholder is
-> tracked in each. See [docs/architecture.md](docs/architecture.md) for why.
+> **`forge/` and `loopy/` are committed in-tree** so ForgeLoop is self-contained
+> and runnable anywhere (including the access-scoped web environment). The upstream
+> code is small and carries no build artifacts. `scripts/vendor.sh` is an optional
+> way to refresh it from upstream. See [docs/architecture.md](docs/architecture.md)
+> for the rationale.
 
 ## Quick start
 
 ```bash
-# 1. Pull the upstream Forge + Loopy code into forge/ and loopy/
-./scripts/vendor.sh
-
-# 2. Create your .env from the template and fill in the blanks
-cp .env.example .env
-
-# 3. Install dependencies for both subsystems
-./scripts/setup-forge.sh
-./scripts/setup-loopy.sh
-
-# 4. (or do all of the above in one shot)
+# 1. Install deps + config for both subsystems (forge/ and loopy/ are already present)
 ./scripts/bootstrap.sh
+
+# 2. Set your LLM key for distillation
+#    forge/.env.local  →  SF_LLM_KEY=sk-ant-...
+
+# 3. Start Forge (server + control panel on http://127.0.0.1:8099)
+( cd forge && ./scripts/start.sh )
 ```
 
 Then follow [docs/forge-setup.md](docs/forge-setup.md) to record your first
@@ -83,7 +82,10 @@ the goal, success criteria, and step plan.
 
 ## Status
 
-🚧 **Early scaffold.** The repo structure, glue-layer skeleton, setup scripts, and
-docs are in place. The upstream `forge/` and `loopy/` code is vendored on demand and
-is **not** yet validated end-to-end inside ForgeLoop (Inner Loop 1, Step 4 onward).
-See [docs/loop-engineering.md](docs/loop-engineering.md) for what's done and what's next.
+🚧 **Integrating.** Repo structure, glue-layer skeleton, setup scripts, and docs
+are in place, and the Forge + Loopy code is now **committed in-tree** and wired to
+its real entrypoints (server on 8099, `harness/main.py` distiller, `forge/.env.local`
+config). Still pending: a live end-to-end record → distill run (needs an
+`SF_LLM_KEY` and an interactive browser) and the Loopy hand-off (Inner Loop 1,
+Steps 4–7). See [docs/loop-engineering.md](docs/loop-engineering.md) for the live
+status board.

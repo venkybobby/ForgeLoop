@@ -1,0 +1,40 @@
+# dependencies & build output
+**/node_modules/
+extension/dist/
+extension/.wxt/
+extension/.output/
+
+# NOTE: app/dist/ is intentionally committed — it is the zero-build control panel.
+
+# local config & data
+.env.local
+data/
+*.log
+
+# CI build output (assembled .app / zip)
+out/
+.pnpm-store/
+
+# python
+__pycache__/
+*.pyc
+
+# os / editor
+.DS_Store
+*.swp
+.npm/
+
+# native app build (Tauri + PyInstaller)
+/build/
+/dist/
+.build-venv/
+desktop/node_modules/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+desktop/src-tauri/binaries/
+
+# build stamp (written by build scripts)
+app/dist/build.json
+
+# updater signing keys (do not commit)
+.updater-keys/

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# bootstrap.sh — one-shot local setup: vendor upstream code, create .env,
-# install dependencies for both Forge and Loopy.
+# bootstrap.sh — one-shot local setup. forge/ and loopy/ are committed in-tree,
+# so this just creates config and installs dependencies for both subsystems.
+# (Run ./scripts/vendor.sh first only if you want to refresh upstream code.)
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -10,8 +11,6 @@ cd "$ROOT"
 
 echo "================ ForgeLoop bootstrap ================"
 
-"$ROOT/scripts/vendor.sh" all
-
 [ -f .env ] || { echo "==> Creating .env from .env.example"; cp .env.example .env; }
 
 "$ROOT/scripts/setup-forge.sh"
@@ -19,4 +18,4 @@ echo "================ ForgeLoop bootstrap ================"
 
 echo "===================================================="
 echo "Bootstrap complete."
-echo "  Next: edit .env (set ANTHROPIC_API_KEY), then follow docs/forge-setup.md"
+echo "  Next: set SF_LLM_KEY in forge/.env.local, then follow docs/forge-setup.md"

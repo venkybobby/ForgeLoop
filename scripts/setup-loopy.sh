@@ -1,33 +1,36 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# setup-loopy.sh — prepare Loopy (loop library + skill) to run inside ForgeLoop.
-# Idempotent. Detects Node / Python projects automatically.
+# setup-loopy.sh — prepare Loopy (loop library + agent skills) inside ForgeLoop.
+#
+# Loopy is primarily a library of loops + agent skills (Markdown/skill files,
+# no runtime install needed). The only installable piece is the optional
+# Cloudflare worker under loopy/loop-library/worker (Node). Idempotent.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-if [ -z "$(find loopy -mindepth 1 -maxdepth 1 ! -name README.md 2>/dev/null)" ]; then
-  echo "!! loopy/ is empty. Run ./scripts/vendor.sh first." >&2
+# --- Code present? ----------------------------------------------------------
+if [ ! -d loopy/skills ] || [ ! -d loopy/loop-library ]; then
+  echo "!! loopy/ does not look like the loopy repo (missing skills/ or" >&2
+  echo "   loop-library/). It is committed in-tree; run ./scripts/vendor.sh loopy" >&2
+  echo "   to refresh it from upstream if you removed it." >&2
   exit 1
 fi
 
 [ -f .env ] || { echo "==> Creating .env from .env.example"; cp .env.example .env; }
 
-for sub in loopy loopy/loop-library loopy/skill; do
-  [ -d "$sub" ] || continue
-  if [ -f "$sub/package.json" ]; then
-    echo "==> [node] installing in $sub"
-    ( cd "$sub" && { command -v pnpm >/dev/null && pnpm install || npm install; } )
+# --- Optional: build the loop-library worker (Node) -------------------------
+WORKER="loopy/loop-library/worker"
+if [ -f "$WORKER/package.json" ]; then
+  if command -v pnpm >/dev/null 2>&1 || command -v npm >/dev/null 2>&1; then
+    echo "==> [node] installing $WORKER"
+    ( cd "$WORKER" && { command -v pnpm >/dev/null 2>&1 && pnpm install || npm install; } )
+  else
+    echo "!! Node not found — skipping optional worker install ($WORKER)." >&2
   fi
-  if [ -f "$sub/requirements.txt" ]; then
-    echo "==> [python] installing $sub/requirements.txt"
-    ( cd "$sub" && python3 -m pip install -r requirements.txt )
-  elif [ -f "$sub/pyproject.toml" ]; then
-    echo "==> [python] installing $sub (pyproject)"
-    ( cd "$sub" && python3 -m pip install -e . )
-  fi
-done
+fi
 
-echo "==> Loopy setup complete. See docs/loopy-setup.md."
+echo "==> Loopy setup complete."
+echo "    The agent-facing Loopy skill lives in loopy/skills/loopy/. See docs/loopy-setup.md."
