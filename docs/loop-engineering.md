@@ -36,8 +36,8 @@ Loopy-ready `SKILL.md`.
 | 1 | Create repo + structure | ✅ done | Scaffold, README, structure. |
 | 2 | Bring in Forge code | ✅ done | Browser-BC committed to `forge/`, loopy to `loopy/` (135 + 53 files). Blocker resolved — this session has access to all three repos. |
 | 3 | Basic integration / setup scripts | ✅ done | `vendor.sh` (now a refresh tool), `setup-forge.sh`, `setup-loopy.sh`, `bootstrap.sh` — rewritten for the **real** Forge (pure-Python server/harness, pnpm extension). |
-| 4 | Test recording + distillation | ⏳ partial | Code runs; entrypoints pinned & docs corrected (port 8099, `python -m harness.main distill`, `forge/.env.local`). A live record→distill run still needs an LLM key + browser. |
-| 5 | Quality check + improve prompts | ⏳ pending | Requires a real distilled `SKILL.md` (Step 4 live run). Prompt lives in `forge/harness/distiller.py`. |
+| 4 | Test recording + distillation | ⏳ partial | **Verified runnable in-container**: deps install, server boots on :8099 + serves the panel, `/api/buckets` works, and a synthesized login `trace.json` loads + **atomizes into 1 segment** (deterministic, no LLM). classify+distill are blocked here only by **LLM access** (NVIDIA host blocked by egress policy; an Anthropic key was reachable but out of credits). One funded+reachable key away from a live `SKILL.md`. |
+| 5 | Quality check + improve prompts | ⏳ pending | `SKILL.md` **contract pinned** in [architecture.md](architecture.md) from `forge/harness/distiller.py`; worked input at [`examples/login-flow/`](../examples/login-flow/). Live quality pass needs the Step 4 distilled output. |
 | 6 | Documentation | ✅ done | `forge-setup.md`, `loopy-setup.md`, `architecture.md`, this file — all corrected to reality. |
 | 7 | Debrief + lock loop | ⏳ pending | Run end-to-end twice with different workflows. |
 

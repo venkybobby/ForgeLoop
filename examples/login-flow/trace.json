@@ -1,0 +1,55 @@
+{
+  "schema_version": "human_tracks_v1",
+  "case_id": "demo-login-herokuapp-001",
+  "domain": "the-internet.herokuapp.com",
+  "task_instruction": "Log in to the secure area using the username and password form.",
+  "navigation_chain": ["the-internet.herokuapp.com"],
+  "events": [
+    {
+      "type": "pageLoad",
+      "url": "https://the-internet.herokuapp.com/login",
+      "ts": 0
+    },
+    {
+      "type": "click",
+      "url": "https://the-internet.herokuapp.com/login",
+      "ts": 1200,
+      "target": {"tagName": "INPUT", "id": "username", "textContent": "", "xpath": "//*[@id=\"username\"]"},
+      "x": 360, "y": 240
+    },
+    {
+      "type": "input",
+      "url": "https://the-internet.herokuapp.com/login",
+      "ts": 2100,
+      "target": {"tagName": "INPUT", "id": "username", "textContent": "", "xpath": "//*[@id=\"username\"]"},
+      "value": "tomsmith"
+    },
+    {
+      "type": "click",
+      "url": "https://the-internet.herokuapp.com/login",
+      "ts": 3000,
+      "target": {"tagName": "INPUT", "id": "password", "textContent": "", "xpath": "//*[@id=\"password\"]"},
+      "x": 360, "y": 300
+    },
+    {
+      "type": "input",
+      "url": "https://the-internet.herokuapp.com/login",
+      "ts": 3900,
+      "target": {"tagName": "INPUT", "id": "password", "textContent": "", "xpath": "//*[@id=\"password\"]"},
+      "value": "SuperSecretPassword!"
+    },
+    {
+      "type": "click",
+      "url": "https://the-internet.herokuapp.com/login",
+      "ts": 4800,
+      "target": {"tagName": "BUTTON", "id": "", "textContent": "Login", "xpath": "//button[@type=\"submit\"]"},
+      "x": 360, "y": 360
+    },
+    {
+      "type": "pageLoad",
+      "url": "https://the-internet.herokuapp.com/secure",
+      "ts": 6000
+    }
+  ],
+  "outcome": {"success": true, "final_url": "https://the-internet.herokuapp.com/secure"}
+}

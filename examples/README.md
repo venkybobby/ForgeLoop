@@ -7,22 +7,25 @@ self-contained demonstration of the full ForgeLoop path:
 record  →  SKILL.md  →  bound loop  →  governed run
 ```
 
-## Planned examples
+## Examples
 
-- **login-flow/** — record logging into a demo site; the skill becomes a loop that
-  verifies it can reach an authenticated page.
-- **form-fill/** — record filling and submitting a form; the loop retries until the
-  submission is confirmed.
+- **[login-flow/](login-flow/)** — ✅ a recorded login workflow
+  (`the-internet.herokuapp.com`). The `trace.json` is committed and validated
+  (loads + atomizes into 1 segment); run the harness to distill its `SKILL.md`.
+- **form-fill/** — ⏳ planned: record filling and submitting a form; the loop
+  retries until the submission is confirmed.
 
-Each example will contain:
+Each example contains:
 
 ```
 <example>/
 ├── README.md       # what it does and how to run it
+├── trace.json      # the recorded workflow (human-track input)
 ├── SKILL.md        # the distilled skill (committed once produced)
 └── loop.md         # the Loopy loop definition it binds to
 ```
 
-> Examples are added during **Inner Loop 1, Step 7** (run end-to-end twice with
-> different workflows). They depend on the upstream Forge code being vendored —
-> see [../docs/loop-engineering.md](../docs/loop-engineering.md).
+> The Forge code is committed in-tree (`forge/`), so examples no longer depend on
+> a vendoring step — only on an LLM key for the distill stage. Examples graduate to
+> a full record→distill→loop run during **Inner Loop 1, Step 7**. See
+> [../docs/loop-engineering.md](../docs/loop-engineering.md).
