@@ -69,14 +69,21 @@ Each pass follows Loopy's Observe → Choose → Act → Verify → Record → R
   purchases, external messages) require explicit human approval before they run.
   Without approval the loop halts at **Approval required**.
 - **Red lines (never violate):**
-- No irreversible or out-of-scope actions.
+- Do NOT use browser password managers or autofill features; manually enter credentials
+- Do NOT log, store, or expose passwords in any trace or debug output
+- Do NOT click 'Forgot Password' or 'Sign Up' links unless explicitly required
+- Do NOT submit the form multiple times if it appears unresponsive
+- Do NOT attempt to bypass login with URL manipulation or direct session access
 - **Security boundaries:**
-- Only act on HTTPS pages whose domain matches the intended target.
+- Only submit credentials to pages with valid SSL certificates (HTTPS)
+- Verify the URL domain matches the expected service domain
+- Do NOT submit credentials if the page shows phishing warnings
+- Do NOT proceed if certificate validation fails
 - **Traceability:** every run emits an audit event and a run receipt
   (see `integration/governance/` and `integration/core/receipt.py`).
 
 Prompt:
-> Authenticate a user by submitting valid username and password credentials through a login form. Work in bounded passes: observe the page, take the single next in-scope action, then verify against the acceptance check. Keep only verified progress. Stop when the page url has changed from the login page to an authenticated resource, or on no measurable progress. Ask before any irreversible or out-of-scope action or any side-effecting browser action.
+> Authenticate a user by submitting valid username and password credentials through a login form. Work in bounded passes: observe the page, take the single next in-scope action, then verify against the acceptance check. Keep only verified progress. Stop when the page url has changed from the login page to an authenticated resource, or on no measurable progress. Ask before do not use browser password managers or autofill features; manually enter credentials or any side-effecting browser action.
 
 ---
 _Generated from `examples/login-flow/SKILL.md` (SHA-256 `4246b68b0b5a5cae…`) by

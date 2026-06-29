@@ -1,26 +1,34 @@
-# integration/dashboard — web UI
+# integration/dashboard — UI
 
-A simple self-hosted UI over the `core` APIs. Three views:
+A **static** dashboard over the loop catalog + governance audit trail. `build.py`
+bakes the data into a single self-contained `index.html` (no server, no runtime
+dependency) — open it straight from disk.
 
-- **Skills** — every `SKILL.md` ingested from `forge/harness`, with its goal,
-  steps, and source recording.
-- **Loops** — skills bound to Loopy loop definitions; their configuration and
-  approval requirements.
-- **Runs** — live and historical runs, their status, and a link to the full
-  trace in `governance/`.
+## Generate
 
-## Intended surface
-
-```
-GET  /skills            list skills
-GET  /skills/:id        skill detail (goal, steps, source)
-GET  /loops             list bound loops
-GET  /runs              list runs (filter by status)
-GET  /runs/:id          run detail + streamed events
-POST /runs/:id/approve  satisfy a governance approval gate
+```bash
+python -m integration.dashboard.build            # -> integration/dashboard/index.html
+# or via the CLI:
+python -m integration.cli.forgeloop dashboard
 ```
 
-Served on `DASHBOARD_PORT` (default `3000`). Reads from `core`; writes only
-approvals, which flow through `governance`.
+It renders:
 
-> Status: **design only.** Framework chosen when the integration stack is locked.
+- **Catalog** — every skill/loop (id, domain, distill model, whether a `loop.md`
+  and receipt exist) with its latest run result as a coloured badge.
+- **Recent runs** — the last runs from the audit trail with their terminal state.
+
+A committed snapshot (`index.html`) is included as an example; regenerate it any
+time. Runtime audit data lives under `./.data/` (gitignored), so the dashboard is
+a read-only view you rebuild on demand.
+
+> Status: **implemented (static generator).** A live server with an approve
+> button (the `POST /runs/:id/approve` surface below) is future work; today
+> approval is granted at run time via `forgeloop run --approve`.
+
+## Future interactive surface
+
+```
+GET  /skills · /loops · /runs · /runs/:id
+POST /runs/:id/approve   satisfy a governance approval gate
+```

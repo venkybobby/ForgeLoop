@@ -11,7 +11,16 @@ half of the ForgeLoop path, using a recorded login workflow.
 | `SKILL.md` | ✅ committed | The distilled skill — produced by a real run (`claude-haiku-4-5`, distill v1). Passes the quality checklist; site-agnostic; no credentials leaked. |
 | `TRACE_GUIDE.md` | ✅ committed | The state-machine navigation guide emitted alongside the skill. |
 | `meta.json` / `evidence.jsonl` | ✅ committed | Distill provenance + source-segment evidence. |
-| `loop.md` / `RECEIPT.md` | ✅ committed | The governed Loopy loop and a run receipt (`Approval required`), from `integration/` (Inner Loop 2). Bind/run: `python -m integration.cli.forgeloop bind examples/login-flow/SKILL.md --out examples/login-flow/loop.md`. |
+| `loop.md` / `RECEIPT.md` | ✅ committed | The governed Loopy loop and a gate receipt (`Approval required`), from `integration/` (Inner Loop 2). |
+| `RECEIPT.live.md` / `evidence/result.png` | ✅ committed | A **real** Playwright run (Inner Loop 3): logs in on a live page and reaches `/secure` → `Result: Success`, receipt extracts *"You logged into a secure area!"*. |
+| `local_server.py` | ✅ committed | A local copy of the login form (ids `username`/`password` match the trace) for the live run, since the sandbox blocks public egress. |
+
+### Real browser run
+
+```bash
+python -m pip install -r integration/requirements.txt   # Playwright (Chromium pre-installed)
+python scripts/live_demo.py login-flow                  # -> Result: Success
+```
 
 `trace.json` is validated: it loads via the harness adapter (auto-detected as
 `human-tracks`) and **atomizes into 1 clean segment** (`/login → /secure`,

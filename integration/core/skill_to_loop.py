@@ -92,6 +92,27 @@ def bullets(section: Section | None, *, limit: int | None = None, max_indent: in
     return out[:limit] if limit else out
 
 
+def headed_bullets(md: str, *keywords: str) -> list[str]:
+    """Top-level bullets under ANY heading (any level) matching a keyword group —
+    used to reach rules nested under H3s (e.g. '### Things You MUST NOT Do') that
+    the H2-only section split doesn't expose."""
+    out: list[str] = []
+    capture = False
+    for line in md.splitlines():
+        h = re.match(r"^#{1,6}\s+(.*\S)\s*$", line)
+        if h:
+            head = h.group(1).lower()
+            capture = any(all(n in head for n in kw.lower().split("+")) for kw in keywords)
+            continue
+        if capture:
+            m = _BULLET.match(line)
+            if m and (len(line) - len(line.lstrip())) <= 1:
+                text = re.sub(r"\*\*(.*?)\*\*", r"\1", m.group(1)).strip()
+                if text:
+                    out.append(text)
+    return out
+
+
 def first_paragraph(section: Section | None) -> str:
     if section is None:
         return ""
@@ -195,8 +216,10 @@ def parse_skill(path: str | Path) -> Skill:
         false_terminals=bullets(find_section(sections, "false terminal"), max_indent=1),
         recovery=subheadings(find_section(sections, "recovery"))
         or bullets(find_section(sections, "recovery", "failure mode"), max_indent=1),
-        red_lines=bullets(find_section(sections, "red line"), max_indent=1),
-        security=bullets(find_section(sections, "security boundaries", "security"), max_indent=1),
+        red_lines=bullets(find_section(sections, "red line"), max_indent=1)
+        or headed_bullets(md, "red line", "must not", "never"),
+        security=bullets(find_section(sections, "security boundaries", "security"), max_indent=1)
+        or headed_bullets(md, "security boundaries", "security boundary"),
         steps=steps,
         metadata=meta,
     )

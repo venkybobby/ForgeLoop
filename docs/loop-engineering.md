@@ -206,6 +206,29 @@ reaches a real terminal state from actual page content.
 
 ---
 
+## Product completeness (post-Loop-3 polish)
+
+Closing out the high/medium feature list on top of Loops 1–3:
+
+- **Both examples run live.** `login-flow` now has its own local form fixture and
+  reaches `Success` (logs in → `/secure`), alongside `form-fill`. One command each:
+  `python scripts/live_demo.py {form-fill|login-flow}`.
+- **Loop catalog** (`integration/core/catalog.py`, `forgeloop catalog`) — scans for
+  skills, shows which have a `loop.md`/receipt, the distill model, and the latest
+  run result (cross-referenced from the audit trail).
+- **Static dashboard** (`integration/dashboard/build.py`, `forgeloop dashboard`) —
+  a self-contained `index.html` (catalog + recent runs with coloured result
+  badges); opens from disk, no server.
+- **Parser hardening** — red lines / security boundaries are now also picked up
+  when a skill nests them under an `### Things You MUST NOT Do` heading (login),
+  not only an H2 "Red Lines" (form-fill).
+
+What's intentionally left for later: an **LLM-driven executor** (choose actions
+against novel DOM instead of replaying a recording), a **live** dashboard server
+with an approve button, and **Docker** packaging.
+
+---
+
 ## Small loops we'll run inside the big one
 
 - "Improve the distillation prompt until the generated `SKILL.md` passes the

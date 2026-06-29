@@ -13,10 +13,10 @@ layer that reads those files and drives bounded runs.
 
 | Module | Responsibility | Status |
 |--------|----------------|--------|
-| [`core/`](core/) | Orchestration: `SKILL.md` → `loop.md` → bounded run → receipt | ✅ implemented (Inner Loop 2) |
+| [`core/`](core/) | Orchestration: `SKILL.md` → `loop.md` → bounded/live run → receipt; loop **catalog**; real browser executor | ✅ implemented (Loops 2–3) |
 | [`governance/`](governance/) | Append-only audit trail + approval gate | ✅ implemented (audit + gate) |
-| [`cli/`](cli/) | `forgeloop {bind,run,audit}` over core + governance | ✅ implemented |
-| [`dashboard/`](dashboard/) | Web UI to browse skills, loops, and runs | ⏳ design only |
+| [`cli/`](cli/) | `forgeloop {bind,run,status,audit,catalog,dashboard}` | ✅ implemented |
+| [`dashboard/`](dashboard/) | Static HTML view of the catalog + runs | ✅ implemented (static generator) |
 
 ## Quick start
 
@@ -25,10 +25,13 @@ python -m integration.cli.forgeloop bind examples/form-fill/SKILL.md --out examp
 python -m integration.cli.forgeloop run  examples/form-fill/loop.md --skill examples/form-fill/SKILL.md
 python -m integration.cli.forgeloop status        # run results from the audit trail
 python -m integration.cli.forgeloop audit         # full governance trail
+python -m integration.cli.forgeloop catalog       # bound loops + latest run status
+python -m integration.cli.forgeloop dashboard     # -> integration/dashboard/index.html
 
 # Real browser execution (Inner Loop 3) — mandatory approval, replays the recording:
 python -m pip install -r integration/requirements.txt
-python scripts/live_demo.py                        # form-fill -> Result: Success (+ screenshot)
+python scripts/live_demo.py form-fill              # -> Result: Success (+ screenshot)
+python scripts/live_demo.py login-flow             # -> Result: Success
 ```
 
 ## Data flow
