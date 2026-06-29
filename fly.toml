@@ -10,8 +10,8 @@
 # Set `app` to a unique name (or let `fly launch` do it). Secrets (SF_LLM_KEY,
 # FORGELOOP_TOKEN, …) are set with `fly secrets set`, NEVER in this file.
 
-app = "forgeloop"               # <-- change to a unique name
-primary_region = "iad"          # <-- pick the region closest to you
+app = "forgeloop-venky"
+primary_region = "ams"
 
 [build]
   dockerfile = "Dockerfile"
