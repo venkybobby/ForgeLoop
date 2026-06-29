@@ -11,6 +11,25 @@
 version: "3.9"
 
 services:
+  # --- ForgeLoop web app: the browser control plane (catalog, runs, approvals) ---
+  # One command to deploy: `docker compose up forgeloop-web`, then open
+  # http://localhost:8055/. Includes Playwright + Chromium for live runs.
+  forgeloop-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${DASHBOARD_PORT:-8055}:8055"
+    environment:
+      DASHBOARD_HOST: 0.0.0.0
+      DASHBOARD_PORT: "8055"
+      # For LLM-driven (agentic) runs, pass your key through:
+      # SF_LLM_KEY: ${SF_LLM_KEY:-}
+      # SF_LLM_BASE: ${SF_LLM_BASE:-https://api.anthropic.com}
+    volumes:
+      - ./.data:/app/.data        # audit trail + run records persist here
+    restart: unless-stopped
+
   # --- Forge: FastAPI ingestion server + control panel + auto-distill ---
   # Pure Python; serves the panel on 8099 and (with JFL_AUTODISTILL=1) distills
   # recordings into SKILL.md under forge/data/harness/skills/.

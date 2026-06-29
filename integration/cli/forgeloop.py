@@ -94,6 +94,12 @@ def _cmd_dashboard(args: argparse.Namespace) -> int:
                      + (["--generated-at", args.generated_at] if args.generated_at else []))
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    from ..server.app import serve
+    serve(args.host, args.port)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="forgeloop", description="ForgeLoop integration CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -137,6 +143,11 @@ def main(argv: list[str] | None = None) -> int:
     dash.add_argument("--out", default="integration/dashboard/index.html")
     dash.add_argument("--generated-at", default="")
     dash.set_defaults(fn=_cmd_dashboard)
+
+    srv = sub.add_parser("serve", help="run the web control plane (browser UI + API)")
+    srv.add_argument("--host", default="127.0.0.1")
+    srv.add_argument("--port", type=int, default=8055)
+    srv.set_defaults(fn=_cmd_serve)
 
     args = ap.parse_args(argv)
     return args.fn(args)

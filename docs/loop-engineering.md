@@ -223,9 +223,33 @@ Closing out the high/medium feature list on top of Loops 1–3:
   when a skill nests them under an `### Things You MUST NOT Do` heading (login),
   not only an H2 "Red Lines" (form-fill).
 
-What's intentionally left for later: an **LLM-driven executor** (choose actions
-against novel DOM instead of replaying a recording), a **live** dashboard server
-with an approve button, and **Docker** packaging.
+---
+
+## Browser-deployable product (web app + agentic + Docker)
+
+The remaining "finish it off" items, now done:
+
+- **Web control plane** (`integration/server/`, `forgeloop serve`) — a stdlib
+  HTTP app: browser UI + JSON API for the whole flow. The UI has **Simulate** and
+  **Run live → Approve & run** buttons; an approved live run executes the browser
+  and shows the receipt. Verified end-to-end: catalog → pending live run → approve
+  → `Success` → receipt, all over HTTP.
+- **Pending-run / approval store** (`integration/governance/runs.py`) — persistent
+  run records with a `pending-approval → done` lifecycle that backs the Approve
+  button.
+- **LLM-driven (agentic) executor** (`integration/core/llm_executor.py`) — observe
+  the live DOM → an LLM chooses the next action → act → verify, looping to a
+  terminal state. The chooser is injected, so it runs autonomously with `SF_LLM_KEY`
+  or with a scripted chooser offline (`scripts/agentic_demo.py` → `Success`).
+- **Docker** (`Dockerfile`, `docker-compose.yml`) — `docker compose up forgeloop-web`
+  bundles Python + Playwright + Chromium; open `http://localhost:8055/`. Guide:
+  [deploy.md](deploy.md).
+
+### Still left (hardening, not features)
+
+API auth + HTTPS before exposing beyond localhost; per-user scoping; and live
+**agentic** runs against **public** sites (needs a funded LLM key + network egress,
+both blocked in this sandbox — the mechanism is proven against the local copies).
 
 ---
 

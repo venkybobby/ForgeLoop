@@ -82,7 +82,8 @@ the goal, success criteria, and step plan.
 
 ## Status
 
-✅ **Inner Loops 1–3 complete** — record → distill → govern → **run for real**.
+✅ **Inner Loops 1–3 complete + a browser-deployable web app** — record → distill →
+govern → **run for real**, all usable from a browser.
 
 - **Loop 1 (Forge):** code committed in-tree; two workflows distilled into clean,
   site-agnostic `SKILL.md` files.
@@ -115,10 +116,28 @@ See [`examples/form-fill/`](examples/form-fill/) and
 [`examples/login-flow/`](examples/login-flow/) — each has `loop.md`, `RECEIPT.md`
 (approval gate), `RECEIPT.live.md` (real `Success` run), and a screenshot.
 
-> **Sandbox note:** this environment blocks public network egress, so the live
-> demo serves the target page locally; the mechanism is identical for a reachable
-> public site (only `--base-url`/DNS changes).
+## Use it in your browser
 
-▶️ **Next:** an LLM-driven executor (choose the next action against novel DOM
-instead of replaying a recording), a live dashboard server with an approve button,
-and Docker packaging. See [docs/loop-engineering.md](docs/loop-engineering.md).
+ForgeLoop ships a **web control plane** — bind, run, **approve live runs**, and read
+receipts from any browser. One command to deploy:
+
+```bash
+docker compose up forgeloop-web        # then open http://localhost:8055/
+# or, without Docker:
+python -m integration.cli.forgeloop serve
+```
+
+In the UI: **Catalog** → **Simulate** (safe dry-run) or **Run live** → **Approve &
+run** (the governance gate) → **Receipt**. Full guide: [docs/deploy.md](docs/deploy.md).
+
+**Execution modes:** *replay* a recording (`scripts/live_demo.py`) or *agentic* —
+an LLM chooses each action against the live DOM (`scripts/agentic_demo.py`; set
+`SF_LLM_KEY` for autonomy).
+
+> **Sandbox note:** this environment blocks public network egress, so the bundled
+> examples run against a local copy of their target page; the mechanism is identical
+> for a reachable public site (only the URL changes).
+
+▶️ **Remaining (hardening, not features):** API auth + HTTPS before exposing beyond
+localhost, per-user scoping, and live agentic runs against public sites (needs
+egress). See [docs/loop-engineering.md](docs/loop-engineering.md).
