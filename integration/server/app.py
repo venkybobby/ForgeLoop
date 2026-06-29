@@ -20,10 +20,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import re
 import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from ..core import catalog as catalog_mod
 from ..core import loop_runner
@@ -100,6 +103,46 @@ def approve_run(run_id: str) -> dict:
     return {"run_id": rec.run_id, "status": rec.status, "result": rec.result}
 
 
+# ──────────────────────────── auth (optional token gate) ───────────────────
+# Set FORGELOOP_TOKEN to require a shared token before any non-health route. This
+# keeps a public deployment (e.g. a Fly.io URL) from being wide open without
+# pulling in full OAuth. Unset = open (fine for localhost / behind a VPN).
+def _token() -> str:
+    return os.environ.get("FORGELOOP_TOKEN", "")
+
+
+def _is_authed(handler) -> bool:
+    tok = _token()
+    if not tok:
+        return True
+    cookie = handler.headers.get("Cookie", "")
+    m = re.search(r"(?:^|;\s*)fl_token=([^;]+)", cookie)
+    if m and m.group(1) == tok:
+        return True
+    if handler.headers.get("X-ForgeLoop-Token") == tok:
+        return True
+    q = parse_qs(urlparse(handler.path).query)
+    return q.get("token", [""])[0] == tok
+
+
+LOGIN_PAGE = """<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width, initial-scale=1"><title>ForgeLoop — sign in</title>
+<style>body{font:14px/1.6 system-ui,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#0d1117;color:#e6edf3}
+form{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:28px 32px;width:300px}
+h1{font-size:16px;margin:0 0 14px}input{width:100%;box-sizing:border-box;padding:8px;border-radius:6px;
+border:1px solid #30363d;background:#0d1117;color:#e6edf3;margin-bottom:12px}
+button{width:100%;padding:9px;border:0;border-radius:6px;background:#1f6feb;color:#fff;font:inherit;cursor:pointer}
+.err{color:#f85149;font-size:12px;margin-bottom:8px}</style></head>
+<body><form method=post action=/login><h1>ForgeLoop — sign in</h1>%%ERR%%
+<input type=password name=token placeholder="Access token" autofocus>
+<button type=submit>Enter</button></form></body></html>"""
+
+
+def _login_html(err: str = "") -> str:
+    # .replace, not .format — the CSS in LOGIN_PAGE contains literal { } braces.
+    return LOGIN_PAGE.replace("%%ERR%%", err)
+
+
 # ──────────────────────────── HTTP handler ─────────────────────────────────
 class _Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):  # quiet
@@ -113,16 +156,37 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _html(self, text, code=200):
+    def _html(self, text, code=200, headers: dict | None = None):
         body = text.encode()
         self.send_response(code)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
+    def _deny(self, p: str) -> bool:
+        """If auth is required and this request lacks it, respond and return True."""
+        if p in ("/healthz", "/login") or _is_authed(self):
+            return False
+        if p.startswith("/api/"):
+            self._json({"error": "unauthorized"}, 401)
+        else:
+            self._html(_login_html(), 401)
+        return True
+
     def do_GET(self):  # noqa: N802
         p = self.path.split("?")[0]
+        if p == "/healthz":
+            return self._json({"ok": True})
+        if p == "/login":
+            # ?token=… convenience link also works (token then lives in a cookie).
+            if _is_authed(self):
+                return self._redirect("/")
+            return self._html(_login_html())
+        if self._deny(p):
+            return
         if p in ("/", "/index.html"):
             return self._html(PAGE)
         if p == "/api/catalog":
@@ -135,10 +199,32 @@ class _Handler(BaseHTTPRequestHandler):
                               200 if rec else 404)
         return self._json({"error": "not found"}, 404)
 
+    def _redirect(self, location: str):
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_POST(self):  # noqa: N802
         p = self.path.split("?")[0]
         n = int(self.headers.get("Content-Length", 0))
-        body = json.loads(self.rfile.read(n) or b"{}") if n else {}
+        raw = self.rfile.read(n) if n else b""
+
+        if p == "/login":
+            submitted = parse_qs(raw.decode())  # form-encoded
+            if submitted.get("token", [""])[0] == _token() and _token():
+                secure = "; Secure" if self.headers.get("X-Forwarded-Proto") == "https" else ""
+                cookie = f"fl_token={_token()}; HttpOnly; SameSite=Lax; Path=/{secure}"
+                self.send_response(302)
+                self.send_header("Location", "/")
+                self.send_header("Set-Cookie", cookie)
+                self.send_header("Content-Length", "0")
+                return self.end_headers()
+            return self._html(_login_html('<div class=err>Wrong token.</div>'), 401)
+
+        if self._deny(p):
+            return
+        body = json.loads(raw or b"{}") if raw else {}
         if p.startswith("/api/loops/") and p.endswith("/run"):
             loop_id = p[len("/api/loops/"):-len("/run")]
             return self._json(start_run(loop_id, body.get("mode", "simulate")))

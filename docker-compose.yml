@@ -23,6 +23,8 @@ services:
     environment:
       DASHBOARD_HOST: 0.0.0.0
       DASHBOARD_PORT: "8055"
+      # Protect the URL with a shared token (login page). Leave empty = open (localhost).
+      FORGELOOP_TOKEN: ${FORGELOOP_TOKEN:-}
       # For LLM-driven (agentic) runs, pass your key through:
       # SF_LLM_KEY: ${SF_LLM_KEY:-}
       # SF_LLM_BASE: ${SF_LLM_BASE:-https://api.anthropic.com}

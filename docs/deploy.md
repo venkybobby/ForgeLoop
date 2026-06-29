@@ -54,6 +54,10 @@ Live runs honour the **approval gate**: nothing touches a browser until you clic
 | `GOVERNANCE_AUDIT_DIR` | `./.data/audit` | append-only audit trail |
 | `LOOPY_RUNS_DIR` | `./.data/runs` | persisted run records + receipts |
 | `SF_LLM_KEY` / `SF_LLM_BASE` / `SF_DISTILL_MODEL` | — | enable **LLM-driven (agentic)** runs |
+| `FORGELOOP_TOKEN` | — (open) | if set, the web app requires this shared token (login page + cookie) before any route except `/healthz` |
+
+> **Deploying to Fly.io?** See [deploy-fly.md](deploy-fly.md) — a scale-to-zero,
+> cheap, one-machine setup with the token gate and HTTPS.
 
 ## Configure the LLM key without a local clone (recommended)
 
