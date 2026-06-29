@@ -128,7 +128,9 @@ python -m integration.cli.forgeloop serve
 ```
 
 In the UI: **Catalog** → **Simulate** (safe dry-run) or **Run live** → **Approve &
-run** (the governance gate) → **Receipt**. Full guide: [docs/deploy.md](docs/deploy.md).
+run** (the governance gate) → **Receipt**. Guides: [docs/deploy.md](docs/deploy.md)
+· **[Fly.io (cheap, scale-to-zero)](docs/deploy-fly.md)**. Set `FORGELOOP_TOKEN` to
+gate the URL with a login.
 
 **Execution modes:** *replay* a recording (`scripts/live_demo.py`) or *agentic* —
 an LLM chooses each action against the live DOM (`scripts/agentic_demo.py`; set

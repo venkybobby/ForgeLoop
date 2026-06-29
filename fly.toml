@@ -1,0 +1,47 @@
+# fly.toml — deploy the ForgeLoop web app to Fly.io, cheaply.
+#
+# Cheap by design: ONE small machine that SCALES TO ZERO when idle (you pay
+# almost nothing while it's not in use; it cold-starts on the next request) plus a
+# tiny persistent volume for the audit trail + run receipts.
+#
+# Build runs on Fly's remote builder (it has internet), so `playwright install`
+# works there — you do NOT need Docker locally. See docs/deploy-fly.md.
+#
+# Set `app` to a unique name (or let `fly launch` do it). Secrets (SF_LLM_KEY,
+# FORGELOOP_TOKEN, …) are set with `fly secrets set`, NEVER in this file.
+
+app = "forgeloop"               # <-- change to a unique name
+primary_region = "iad"          # <-- pick the region closest to you
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DASHBOARD_HOST = "0.0.0.0"
+  DASHBOARD_PORT = "8055"
+
+[http_service]
+  internal_port = 8055
+  force_https = true
+  auto_stop_machines = "stop"   # scale to zero when idle
+  auto_start_machines = true    # wake on the next request
+  min_machines_running = 0      # ← the "cheap" knob
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/healthz"           # unauthenticated; safe behind the token gate
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+
+# A single shared-cpu machine with 1 GB RAM (enough for headless Chromium on one
+# page). Bump memory to "2gb" if live/agentic runs OOM on heavy pages.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+
+# Persistent storage for ./.data (audit trail + run records). Create the volume
+# once: `fly volumes create forgeloop_data --size 1 --region <region>`.
+[mounts]
+  source = "forgeloop_data"
+  destination = "/app/.data"
