@@ -129,8 +129,11 @@ python -m integration.cli.forgeloop serve
 
 In the UI: **Catalog** → **Simulate** (safe dry-run) or **Run live** → **Approve &
 run** (the governance gate) → **Receipt**. Guides: [docs/deploy.md](docs/deploy.md)
-· **[Fly.io (cheap, scale-to-zero)](docs/deploy-fly.md)**. Set `FORGELOOP_TOKEN` to
-gate the URL with a login.
+· **[Fly.io (cheap, scale-to-zero)](docs/deploy-fly.md)** · [auth & multi-user](docs/auth.md).
+
+**Multi-user ready:** GitHub **OAuth** (with a shared-token / dev / open fallback),
+**per-user run scoping**, **SQLite** persistence, and **rate limits** — see
+[docs/auth.md](docs/auth.md). For solo use, just set `FORGELOOP_TOKEN`.
 
 **Execution modes:** *replay* a recording (`scripts/live_demo.py`) or *agentic* —
 an LLM chooses each action against the live DOM (`scripts/agentic_demo.py`; set

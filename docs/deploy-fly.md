@@ -47,6 +47,17 @@ fly secrets set SF_LLM_KEY="nvapi-…" \
 > The web app reads `SF_LLM_KEY` straight from the environment — no `.env` file
 > needed in the container. Replay (`Run live`) needs no key; only **agentic** runs do.
 
+**For multi-user (GitHub OAuth) instead of the shared token**, set the OAuth
+secrets per [docs/auth.md](auth.md) — and always set `FORGELOOP_SESSION_SECRET` so
+logins survive redeploys:
+
+```bash
+fly secrets set GITHUB_OAUTH_CLIENT_ID=… GITHUB_OAUTH_CLIENT_SECRET=… \
+                FORGELOOP_BASE_URL=https://<app>.fly.dev \
+                FORGELOOP_SESSION_SECRET="$(openssl rand -hex 32)" \
+                FORGELOOP_ALLOWED_USERS=you,teammate
+```
+
 ## 4. Deploy
 
 ```bash
