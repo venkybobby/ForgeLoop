@@ -61,6 +61,23 @@ fly open            # opens https://<app>.fly.dev/  → enter your FORGELOOP_TOK
 - `fly logs` to watch; `fly status` for machine state; `fly secrets list` to see
   (names of) configured secrets.
 
+## 6. Auto-deploy from GitHub (CI/CD)
+
+The repo ships `.github/workflows/deploy.yml`: it runs the smoke test on every PR
+and push, and **auto-deploys to Fly on merge to `main`**. One-time setup:
+
+```bash
+# create a deploy-scoped Fly token (copy the printed FlyV1… value):
+fly tokens create deploy --expiry 8760h
+```
+
+Then in GitHub: **repo → Settings → Secrets and variables → Actions → New
+repository secret** → name `FLY_API_TOKEN`, value = that token.
+
+After that, every merge to `main` runs tests then `flyctl deploy --remote-only`
+(the app must already exist from step 2 — CI ships *updates* to it). Watch runs
+under the repo's **Actions** tab.
+
 ## Cost & ops knobs
 
 | Want | Do |

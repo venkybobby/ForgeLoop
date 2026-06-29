@@ -245,11 +245,22 @@ The remaining "finish it off" items, now done:
   bundles Python + Playwright + Chromium; open `http://localhost:8055/`. Guide:
   [deploy.md](deploy.md).
 
+### Deployment & CI/CD
+
+- **Fly.io** (`fly.toml`, `docs/deploy-fly.md`) — one scale-to-zero machine + a 1 GB
+  volume; HTTPS via Fly; built on Fly's remote builder (no local Docker needed).
+- **Access gate** — optional `FORGELOOP_TOKEN` (login page + cookie) so the public
+  URL isn't open; `/healthz` stays public for platform checks.
+- **CI/CD** (`.github/workflows/deploy.yml`) — smoke test (`scripts/smoke.sh`) on
+  every PR/push; **auto-deploy to Fly on merge to `main`** (needs a `FLY_API_TOKEN`
+  GitHub secret). On Fly, egress is open, so the **NVIDIA key + agentic runs work**.
+
 ### Still left (hardening, not features)
 
-API auth + HTTPS before exposing beyond localhost; per-user scoping; and live
-**agentic** runs against **public** sites (needs a funded LLM key + network egress,
-both blocked in this sandbox — the mechanism is proven against the local copies).
+Real per-user auth (OAuth/SSO) and per-user run scoping for multi-tenant use; the
+token gate is a single shared secret (fine for solo/private). `.data` files →
+SQLite/Postgres if you need concurrency. Rate limits + abuse protection before a
+public SaaS launch.
 
 ---
 
