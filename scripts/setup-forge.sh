@@ -27,10 +27,13 @@ if [ ! -f forge/requirements.txt ] || [ ! -f forge/server/server.py ]; then
 fi
 
 # --- 2. forge/.env.local (Forge's own config) -------------------------------
-if [ ! -f forge/.env.local ]; then
+# Prefer environment variables (Claude Code env / CI secrets) — no key in the repo.
+if [ -n "${SF_LLM_KEY:-}" ]; then
+  "$ROOT/scripts/write-env.sh"
+elif [ ! -f forge/.env.local ]; then
   echo "==> Creating forge/.env.local from forge/config.example.env"
   cp forge/config.example.env forge/.env.local
-  echo "    Edit forge/.env.local and set SF_LLM_KEY=sk-ant-... before distilling."
+  echo "    Set SF_LLM_KEY (env var, or edit forge/.env.local) before distilling."
 fi
 
 # ForgeLoop's own orchestration .env (ports, governance) — separate layer.

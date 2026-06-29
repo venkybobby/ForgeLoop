@@ -55,6 +55,29 @@ Live runs honour the **approval gate**: nothing touches a browser until you clic
 | `LOOPY_RUNS_DIR` | `./.data/runs` | persisted run records + receipts |
 | `SF_LLM_KEY` / `SF_LLM_BASE` / `SF_DISTILL_MODEL` | — | enable **LLM-driven (agentic)** runs |
 
+## Configure the LLM key without a local clone (recommended)
+
+Never commit a key. Set it as an **environment variable / secret** and let
+`scripts/write-env.sh` materialize `forge/.env.local` from it at runtime — the
+script contains no secret, only the plumbing.
+
+- **Claude Code on the web:** add `SF_LLM_KEY` (and optionally `SF_LLM_BASE`,
+  `SF_DISTILL_MODEL`, `SF_CLASSIFY_MODEL`) to your environment's **environment
+  variables**. The committed **SessionStart hook** (`.claude/settings.json`) runs
+  `scripts/write-env.sh` each session, so Forge + the integration layer are
+  configured automatically — no file editing, no key in git.
+- **CI / GitHub Actions:** store `SF_LLM_KEY` as a repository **secret**
+  (Settings → Secrets and variables → Actions) and expose it to the job as an env
+  var; the same script (or `setup-forge.sh`) picks it up.
+- **Docker:** pass it at run time — `docker run -e SF_LLM_KEY=… -e SF_LLM_BASE=… …`
+  (or uncomment the `SF_LLM_*` lines in `docker-compose.yml`).
+- **Local shell:** `export SF_LLM_KEY=…` then `bash scripts/write-env.sh`.
+
+The base URL and default models are inferred from the key prefix when not set
+(`nvapi-*` → NVIDIA gateway + `z-ai/glm-5.1`; `sk-ant-*` → Anthropic +
+`claude-haiku-4-5`). The generated `forge/.env.local` is gitignored and written
+`chmod 600`.
+
 ## Live vs. agentic execution
 
 - **Live (replay):** replays a recorded `trace.json` against the page — fast and
