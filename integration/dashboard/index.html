@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgeLoop dashboard</title>
+<style>
+  body{font:14px/1.5 system-ui,sans-serif;margin:0;background:#f6f8fa;color:#1f2328}
+  header{background:#0d1117;color:#fff;padding:18px 24px}
+  header h1{margin:0;font-size:18px} header p{margin:4px 0 0;color:#9da7b1}
+  main{max-width:980px;margin:24px auto;padding:0 16px}
+  .cards{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:14px 18px;min-width:120px}
+  .card b{font-size:22px;display:block}
+  h2{font-size:15px;margin:22px 0 8px}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d0d7de;border-radius:8px;overflow:hidden}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid #eaeef2;vertical-align:top}
+  th{background:#f6f8fa;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#57606a}
+  td.c{text-align:center} code{background:#eff1f3;padding:1px 5px;border-radius:4px;font-size:12px}
+  .muted{color:#8b949e;font-size:12px}
+  .badge{color:#fff;padding:2px 8px;border-radius:999px;font-size:12px;white-space:nowrap}
+  footer{max-width:980px;margin:16px auto 40px;padding:0 16px;color:#8b949e;font-size:12px}
+</style></head>
+<body>
+<header><h1>ForgeLoop dashboard</h1><p>Forge skills → governed Loopy loops → runs</p></header>
+<main>
+  <div class="cards">
+    <div class="card"><b>2</b>skills / loops</div>
+    <div class="card"><b>2</b>with a Success run</div>
+    <div class="card"><b>12</b>audit events</div>
+  </div>
+
+  <h2>Catalog</h2>
+  <table><thead><tr><th>Skill / loop</th><th>Domain</th><th>Model</th><th>loop.md</th>
+    <th>receipt</th><th>last run</th></tr></thead>
+    <tbody><tr><td><code>httpbin.org::fill-and-submit-form</code><br><span class='muted'>8 milestones · 7 red lines</span></td><td>httpbin.org</td><td>claude-haiku-4-5</td><td class='c'>✅</td><td class='c'>✅</td><td><span class="badge" style="background:#137333">Success</span></td></tr>
+<tr><td><code>herokuapp.com::login-with-credentials</code><br><span class='muted'>9 milestones · 5 red lines</span></td><td>herokuapp.com</td><td>claude-haiku-4-5</td><td class='c'>✅</td><td class='c'>✅</td><td><span class="badge" style="background:#137333">Success</span></td></tr></tbody></table>
+
+  <h2>Recent runs</h2>
+  <table><thead><tr><th>When</th><th>Loop</th><th>Result</th></tr></thead>
+    <tbody><tr><td class='muted'>2026-06-29T00:12:15.594533+00:00</td><td>Login with Credentials Loop</td><td><span class="badge" style="background:#137333">Success</span></td></tr>
+<tr><td class='muted'>2026-06-29T00:12:15.469631+00:00</td><td>Login with Credentials Loop</td><td><span class="badge" style="background:#b06000">Approval required</span></td></tr>
+<tr><td class='muted'>2026-06-29T00:12:13.889697+00:00</td><td>Fill and Submit Form Loop</td><td><span class="badge" style="background:#137333">Success</span></td></tr>
+<tr><td class='muted'>2026-06-29T00:12:13.764775+00:00</td><td>Fill and Submit Form Loop</td><td><span class="badge" style="background:#b06000">Approval required</span></td></tr></tbody></table>
+</main>
+<footer>Static snapshot · generated 2026-06-29 (demo snapshot) ·
+  read-only view of the catalog + governance audit trail. Regenerate with
+  <code>python -m integration.dashboard.build</code>.</footer>
+</body></html>

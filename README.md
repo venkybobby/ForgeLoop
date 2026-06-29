@@ -103,14 +103,22 @@ python -m pip install -r integration/requirements.txt
 python scripts/live_demo.py          # form-fill -> Result: Success (+ screenshot)
 ```
 
-See [`examples/form-fill/`](examples/form-fill/) — `loop.md`, `RECEIPT.md`
-(approval gate) and `RECEIPT.live.md` (real `Success` run) — and
-[`examples/login-flow/`](examples/login-flow/).
+Both examples run live to `Success` (`python scripts/live_demo.py {form-fill|login-flow}`).
+Browse everything:
+
+```bash
+python -m integration.cli.forgeloop catalog       # bound loops + latest run result
+python -m integration.cli.forgeloop dashboard      # static integration/dashboard/index.html
+```
+
+See [`examples/form-fill/`](examples/form-fill/) and
+[`examples/login-flow/`](examples/login-flow/) — each has `loop.md`, `RECEIPT.md`
+(approval gate), `RECEIPT.live.md` (real `Success` run), and a screenshot.
 
 > **Sandbox note:** this environment blocks public network egress, so the live
-> demo serves the target form locally; the mechanism is identical for a reachable
+> demo serves the target page locally; the mechanism is identical for a reachable
 > public site (only `--base-url`/DNS changes).
 
 ▶️ **Next:** an LLM-driven executor (choose the next action against novel DOM
-instead of replaying), a skill **catalog**, and a **dashboard**. See
-[docs/loop-engineering.md](docs/loop-engineering.md).
+instead of replaying a recording), a live dashboard server with an approve button,
+and Docker packaging. See [docs/loop-engineering.md](docs/loop-engineering.md).

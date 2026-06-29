@@ -17,6 +17,7 @@ import sys
 
 from ..core import skill_to_loop as s2l
 from ..core import loop_runner
+from ..core import catalog as catalog_mod
 from ..governance import audit
 
 
@@ -78,6 +79,21 @@ def _cmd_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_catalog(args: argparse.Namespace) -> int:
+    entries = catalog_mod.build_catalog(args.root)
+    if args.json:
+        print(json.dumps(catalog_mod.to_dicts(entries), indent=2, ensure_ascii=False))
+    else:
+        print(catalog_mod.render_table(entries))
+    return 0
+
+
+def _cmd_dashboard(args: argparse.Namespace) -> int:
+    from ..dashboard import build as dash
+    return dash.main(["--root", args.root, "--out", args.out]
+                     + (["--generated-at", args.generated_at] if args.generated_at else []))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="forgeloop", description="ForgeLoop integration CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -110,6 +126,17 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("status", help="summarize runs from the audit trail")
     s.set_defaults(fn=_cmd_status)
+
+    c = sub.add_parser("catalog", help="list bound loops and their latest run status")
+    c.add_argument("--root", default="examples", help="where to scan for skills")
+    c.add_argument("--json", action="store_true")
+    c.set_defaults(fn=_cmd_catalog)
+
+    dash = sub.add_parser("dashboard", help="generate a static HTML dashboard")
+    dash.add_argument("--root", default="examples")
+    dash.add_argument("--out", default="integration/dashboard/index.html")
+    dash.add_argument("--generated-at", default="")
+    dash.set_defaults(fn=_cmd_dashboard)
 
     args = ap.parse_args(argv)
     return args.fn(args)
