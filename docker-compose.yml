@@ -23,8 +23,13 @@ services:
     environment:
       DASHBOARD_HOST: 0.0.0.0
       DASHBOARD_PORT: "8055"
-      # Protect the URL with a shared token (login page). Leave empty = open (localhost).
-      FORGELOOP_TOKEN: ${FORGELOOP_TOKEN:-}
+      # Auth (see docs/auth.md). Precedence: OAuth > dev-login > token > open.
+      FORGELOOP_TOKEN: ${FORGELOOP_TOKEN:-}              # shared-token gate (solo)
+      # GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}     # multi-user OAuth
+      # GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
+      # FORGELOOP_BASE_URL: ${FORGELOOP_BASE_URL:-}            # e.g. https://host
+      # FORGELOOP_SESSION_SECRET: ${FORGELOOP_SESSION_SECRET:-} # keep sessions across restarts
+      FORGELOOP_RATE_PER_MIN: ${FORGELOOP_RATE_PER_MIN:-30}
       # For LLM-driven (agentic) runs, pass your key through:
       # SF_LLM_KEY: ${SF_LLM_KEY:-}
       # SF_LLM_BASE: ${SF_LLM_BASE:-https://api.anthropic.com}

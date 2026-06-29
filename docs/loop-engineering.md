@@ -255,12 +255,25 @@ The remaining "finish it off" items, now done:
   every PR/push; **auto-deploy to Fly on merge to `main`** (needs a `FLY_API_TOKEN`
   GitHub secret). On Fly, egress is open, so the **NVIDIA key + agentic runs work**.
 
-### Still left (hardening, not features)
+### Phase 2 — multi-user hardening (done)
 
-Real per-user auth (OAuth/SSO) and per-user run scoping for multi-tenant use; the
-token gate is a single shared secret (fine for solo/private). `.data` files →
-SQLite/Postgres if you need concurrency. Rate limits + abuse protection before a
-public SaaS launch.
+- **Auth** (`integration/server/auth.py`, [docs/auth.md](auth.md)) — GitHub **OAuth**
+  with signed-cookie sessions; **dev-login** and shared-**token** and **open**
+  fallbacks (precedence OAuth → dev → token → open). Optional `FORGELOOP_ALLOWED_USERS`.
+- **Per-user scoping** — every run has an `owner`; `GET /api/runs` lists only yours,
+  `GET /api/runs/<id>` 404s others', approve refuses non-owners.
+- **SQLite storage** (`integration/governance/db.py`) — audit trail + run records in
+  one `FORGELOOP_DB` file; survives restarts, handles concurrent users (WAL).
+- **Rate limits** (`ratelimit.py`, `FORGELOOP_RATE_PER_MIN`) — per-user/minute cap on
+  run/approve → HTTP 429 + a `ratelimit.blocked` audit event.
+
+Verified: open/token/dev/oauth-url modes, cross-user isolation, 429 on limit, and
+persistence + session survival across a restart.
+
+### Still genuinely optional
+
+Postgres instead of SQLite (only if you outgrow one box); abuse protection /
+quotas for a true public SaaS; and an LLM-driven executor robustness pass.
 
 ---
 

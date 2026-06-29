@@ -21,7 +21,7 @@ python3 -m py_compile $(find integration scripts -name '*.py')
 echo "==> functional smoke (no network/browser)"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-export GOVERNANCE_AUDIT_DIR="$tmp/audit" LOOPY_RUNS_DIR="$tmp/runs"
+export FORGELOOP_DB="$tmp/forgeloop.db"   # isolate the SQLite store for CI
 
 python3 -m integration.cli.forgeloop bind examples/form-fill/SKILL.md --out "$tmp/loop.md" >/dev/null
 python3 -m integration.cli.forgeloop run "$tmp/loop.md" --skill examples/form-fill/SKILL.md --simulate >/dev/null
