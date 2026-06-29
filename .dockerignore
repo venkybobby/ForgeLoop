@@ -1,0 +1,16 @@
+.git
+.gitignore
+.data/
+**/__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+forge/data/
+forge/.env.local
+.env
+.env.local
+**/node_modules/
+**/dist/
+examples/*/evidence/
+*.log
