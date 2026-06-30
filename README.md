@@ -135,6 +135,15 @@ run** (the governance gate) → **Receipt**. Guides: [docs/deploy.md](docs/deplo
 **per-user run scoping**, **SQLite** persistence, and **rate limits** — see
 [docs/auth.md](docs/auth.md). For solo use, just set `FORGELOOP_TOKEN`.
 
+## Capture skills from any browser (hosted recorder)
+
+The browser **extension** records workflows (e.g. on SARO) and uploads them to a
+**hosted Forge recorder** that distils them into skills. It's a separate, deployable,
+multi-tenant service (`Dockerfile.forge`, `fly.forge.toml`,
+`integration/recorder/serve.py`) with **per-client API keys** (`/admin/keys`) — so
+clients install the extension, point it at your URL, and their captures flow to your
+cloud. Full guide: **[docs/recorder-hosting.md](docs/recorder-hosting.md)**.
+
 **Execution modes:** *replay* a recording (`scripts/live_demo.py`) or *agentic* —
 an LLM chooses each action against the live DOM (`scripts/agentic_demo.py`; set
 `SF_LLM_KEY` for autonomy).

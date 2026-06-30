@@ -1,0 +1,40 @@
+# fly.forge.toml — the HOSTED FORGE RECORDER (separate Fly app from the web app).
+# Clients' browser extensions upload recordings here; it distills them to skills.
+#
+# Deploy:  fly deploy --config fly.forge.toml
+# (set `app` to a unique name, e.g. forge-recorder-venky)
+
+app = "forge-recorder-venky"
+primary_region = "ams"
+
+[build]
+  dockerfile = "Dockerfile.forge"
+
+[env]
+  JFL_DATA_DIR = "/app/.data/forge"
+  JFL_AUTODISTILL = "1"
+  PORT = "8099"
+
+[http_service]
+  internal_port = 8099
+  force_https = true
+  auto_stop_machines = "stop"     # scale to zero; a client upload cold-starts it
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/healthz"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+
+# Distillation is HTTP-to-LLM (no browser) — 512 MB is plenty. Bump if big traces OOM.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+# Persist recordings, api-keys.json, and distilled skills.
+[mounts]
+  source = "forge_data"
+  destination = "/app/.data"

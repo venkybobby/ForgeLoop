@@ -1,0 +1,25 @@
+# Hosted Forge ingestion server — receives recordings from clients' browser
+# extensions and distills them into skills. Pure Python (no browser needed here).
+#
+#   docker build -f Dockerfile.forge -t forge-recorder .
+#   docker run -p 8099:8099 -e JFL_ADMIN_TOKEN=… -e SF_LLM_KEY=… forge-recorder
+#
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    JFL_DATA_DIR=/app/.data/forge \
+    JFL_AUTODISTILL=1 \
+    PORT=8099
+
+WORKDIR /app
+
+COPY forge/requirements.txt /app/forge/requirements.txt
+RUN pip install -r /app/forge/requirements.txt
+
+# The vendored server + the integration hosting wrapper.
+COPY forge /app/forge
+COPY integration /app/integration
+
+EXPOSE 8099
+CMD ["python", "-m", "integration.recorder.serve"]
