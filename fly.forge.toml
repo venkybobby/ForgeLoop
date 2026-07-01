@@ -2,9 +2,9 @@
 # Clients' browser extensions upload recordings here; it distills them to skills.
 #
 # Deploy:  fly deploy --config fly.forge.toml
-# (set `app` to a unique name, e.g. forge-recorder-venky)
+# (`app` is the live recorder instance; change it if you fork to a new Fly app.)
 
-app = "forge-recorder-venky"
+app = "forge-recorder-776123"
 primary_region = "ams"
 
 [build]
