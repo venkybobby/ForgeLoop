@@ -127,6 +127,24 @@ export function PopupApp() {
       setStopped({ row, summary });
       setActiveRow(null);
       setView('stopped');
+      // Auto-upload: send to the server immediately so nothing is stranded
+      // locally. (The Discard button on the 'stopped' view still lets you delete
+      // a bad capture afterwards.)
+      try {
+        await sendRuntimeMessage<{ ok: boolean }>(
+          taskName.trim()
+            ? { type: 'resume-upload', traceId: row.trace_id, label: taskName.trim() }
+            : { type: 'resume-upload', traceId: row.trace_id }
+        );
+        stoppedRef.current = false;
+        setStopped(null);
+        setTaskName('');
+        setNotice('Recording uploaded — check your portal.');
+        setView('idle');
+      } catch (caught) {
+        // Leave the manual Upload button available if auto-upload failed.
+        setError(errorMessage(caught));
+      }
     });
   }
 
