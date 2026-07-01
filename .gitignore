@@ -48,6 +48,10 @@ traces/
 # Integration runtime state (audit trail, persisted run receipts):
 .data/
 
+# Local scratch build artifacts (prebuilt extension zips, sample traces):
+scratchpad-ext/
+scratchpad-trace/
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db
