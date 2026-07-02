@@ -193,9 +193,12 @@ async function loadRec(){const d=await api('/api/traj');
   document.querySelector('#rec tbody').innerHTML=(d.trajectories||[]).map(t=>{
     const pr=t.progress?` <span class=muted>(${t.progress.phase} ${t.progress.current}/${t.progress.total})</span>`:'';
     const note=t.note?`<div class=muted style="margin-top:4px;max-width:340px">${t.note}</div>`:'';
+    const running=t.distill_status==='running';
+    const redo=t.upload_id?` · <span class=link onclick="reprocess('${t.upload_id}')">${running?'':'reprocess'}</span>`:'';
     return `<tr><td class=muted>${(t.created_at||'').replace('T',' ').slice(0,19)}</td>
       <td>${t.label||'<span class=muted>(untitled)</span>'}</td><td>${badge(t.status)}</td>
-      <td>${badge(t.distill_status)}${pr}${note}</td></tr>`}).join('')||'<tr><td colspan=4 class=muted>No recordings yet — record one with the extension.</td></tr>'}
+      <td>${badge(t.distill_status)}${pr}${redo}${note}</td></tr>`}).join('')||'<tr><td colspan=4 class=muted>No recordings yet — record one with the extension.</td></tr>'}
+async function reprocess(id){try{await fetch('/api/distill/'+encodeURIComponent(id),{method:'POST',headers:hdr()});refresh()}catch(e){}}
 async function loadSkills(){const d=await api('/api/buckets');const rows=[];
   (d.domains||[]).forEach(dom=>dom.buckets.forEach(b=>rows.push({dom:dom.domain,...b})));
   document.querySelector('#sk tbody').innerHTML=rows.map(b=>`<tr>
