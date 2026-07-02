@@ -81,7 +81,54 @@ describe('live trace summary', () => {
         screenshot: 1
       },
       screenshot_count: 1,
-      video_chunk_count: 0
+      video_chunk_count: 0,
+      redactions: {},
+      redaction_total: 0
+    });
+  });
+
+  it('tallies redactions by class across nested event values and form fields', async () => {
+    const row = recording('tr_redact', {
+      status: 'failed',
+      created_at: Date.parse('2026-06-04T00:00:00.000Z'),
+      updated_at: Date.parse('2026-06-04T00:00:10.000Z'),
+      envelope: {
+        ...recording('tr_redact').envelope,
+        started_at: '2026-06-04T00:00:00.000Z'
+      }
+    });
+    await db.recordings.put(row);
+    await db.events.bulkPut([
+      {
+        event_id: 'ev_input',
+        trace_id: 'tr_redact',
+        tab_id: 1,
+        timestamp: Date.parse('2026-06-04T00:00:03.000Z'),
+        url: 'https://www.example.test/login',
+        kind: 'input',
+        value: { value: null, redaction: { strategy: 'classified', classes: ['classified_password'] } }
+      } as never,
+      {
+        event_id: 'ev_form',
+        trace_id: 'tr_redact',
+        tab_id: 1,
+        timestamp: Date.parse('2026-06-04T00:00:05.000Z'),
+        url: 'https://www.example.test/login',
+        kind: 'form_summary',
+        fields: [
+          { name: 'email', type: 'email', redactionClasses: ['classified_email'] },
+          { name: 'phone', type: 'tel', redactionClasses: ['classified_phone'] }
+        ]
+      } as never
+    ]);
+
+    const summary = await buildLiveTraceSummary(row, { now: () => Date.parse('2026-06-04T00:00:10.000Z') });
+
+    expect(summary.redaction_total).toBe(3);
+    expect(summary.redactions).toEqual({
+      classified_password: 1,
+      classified_email: 1,
+      classified_phone: 1
     });
   });
 

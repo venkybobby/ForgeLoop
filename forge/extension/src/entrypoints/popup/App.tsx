@@ -126,25 +126,10 @@ export function PopupApp() {
       const summary = await buildLiveTraceSummary(row);
       setStopped({ row, summary });
       setActiveRow(null);
+      // Show the pre-upload review panel. The recording stays LOCAL until the
+      // user sees what was captured (and what was redacted) and approves —
+      // a deliberate consent checkpoint; nothing leaves the browser unreviewed.
       setView('stopped');
-      // Auto-upload: send to the server immediately so nothing is stranded
-      // locally. (The Discard button on the 'stopped' view still lets you delete
-      // a bad capture afterwards.)
-      try {
-        await sendRuntimeMessage<{ ok: boolean }>(
-          taskName.trim()
-            ? { type: 'resume-upload', traceId: row.trace_id, label: taskName.trim() }
-            : { type: 'resume-upload', traceId: row.trace_id }
-        );
-        stoppedRef.current = false;
-        setStopped(null);
-        setTaskName('');
-        setNotice('Recording uploaded — check your portal.');
-        setView('idle');
-      } catch (caught) {
-        // Leave the manual Upload button available if auto-upload failed.
-        setError(errorMessage(caught));
-      }
     });
   }
 
@@ -160,7 +145,7 @@ export function PopupApp() {
       stoppedRef.current = false;
       setStopped(null);
       setTaskName('');
-      setNotice('Recording uploaded.');
+      setNotice('Recording uploaded — check your portal.');
       setView('idle');
     });
   }
@@ -238,8 +223,8 @@ export function PopupApp() {
           <Card>
             <CardContent>
               <div className="jf-rec-top">
-                <span className="jf-muted">Recording saved</span>
-                <Badge tone="success">Ready</Badge>
+                <span className="jf-muted">Review before upload</span>
+                <Badge tone="success">Local only</Badge>
               </div>
               <div className="jf-summary-grid">
                 <div className="jf-stat">
@@ -258,11 +243,34 @@ export function PopupApp() {
               {stopped.summary.domains.length ? (
                 <p className="jf-domains">{stopped.summary.domains.slice(0, 6).join(', ')}</p>
               ) : null}
+              <div className="jf-redactions">
+                {stopped.summary.redaction_total ? (
+                  <>
+                    <span className="jf-redaction-head">
+                      🔒 {stopped.summary.redaction_total} sensitive value
+                      {stopped.summary.redaction_total === 1 ? '' : 's'} redacted before upload
+                    </span>
+                    <ul className="jf-redaction-list">
+                      {redactionBreakdown(stopped.summary).map(([label, count]) => (
+                        <li key={label}>
+                          {label}: <strong>{count}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <span className="jf-muted">No sensitive values detected to redact.</span>
+                )}
+              </div>
             </CardContent>
           </Card>
+          <p className="jf-consent">
+            This capture stays on your device until you approve it. Uploading sends the
+            redacted recording to your Forge server to distil into a skill.
+          </p>
           <div className="jf-actions">
             <Button variant="primary" onClick={upload} disabled={busy}>
-              Upload
+              Approve &amp; upload
             </Button>
             <Button onClick={discard} disabled={busy}>
               Discard
@@ -283,6 +291,25 @@ function elapsedMs(row: RecordingRow | null, now: number): number {
 
 function totalEvents(summary: TraceSummary): number {
   return Object.values(summary.event_counts).reduce((sum, count) => sum + count, 0);
+}
+
+const REDACTION_LABELS: Record<string, string> = {
+  classified_password: 'Passwords',
+  classified_email: 'Emails',
+  classified_phone: 'Phone numbers',
+  classified_address: 'Addresses',
+  classified_payment: 'Payment details',
+  classified_otp: 'One-time codes',
+  classified_token: 'Tokens / cookies',
+  large_body: 'Large bodies',
+};
+
+function redactionBreakdown(summary: TraceSummary): Array<[string, number]> {
+  const entries = Object.entries(summary.redactions ?? {}) as Array<[string, number]>;
+  return entries
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cls, count]) => [REDACTION_LABELS[cls] ?? cls, count]);
 }
 
 function formatDuration(ms: number): string {

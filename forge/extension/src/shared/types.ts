@@ -79,6 +79,10 @@ export type TraceSummary = {
   event_counts: Record<string, number>;
   screenshot_count: number;
   video_chunk_count: number;
+  // Redaction transparency: how many sensitive values were redacted before
+  // upload, broken down by class (shown in the pre-upload review panel).
+  redactions?: Partial<Record<RedactionClass, number>>;
+  redaction_total?: number;
 };
 
 export type EventBase = {
