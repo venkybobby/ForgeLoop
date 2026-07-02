@@ -459,6 +459,20 @@ _PIPELINE_LOCK = threading.Lock()
 _PROGRESS: dict[str, dict] = {}     # upload_id → {phase,current,total,detail} (in-memory, live)
 
 
+class _LLMErrorCapture(logging.Handler):
+    """Grabs the last harness warning that names an LLM/HTTP/classify failure, so
+    the distill note can quote the real gateway error instead of guessing."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.last: str = ""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        msg = record.getMessage()
+        if any(k in msg for k in ("HTTP ", "LLM ", "classify failed", "distill", "gateway")):
+            self.last = msg[:300]
+
+
 def _apply_harness_config(cfg: dict) -> None:
     from harness import config as hconfig
     hconfig.LLM_KEY = cfg.get("llm_key", "")
@@ -501,29 +515,40 @@ def _ingest_distill_install(upload_id: str) -> None:
                 return 0
 
         trace_json = _trace_dir(upload_id) / "trace.json"
+        # Capture the harness's own warnings (classify/distill LLM failures log
+        # here and are otherwise swallowed) so the LAST real error can be shown in
+        # the portal note — e.g. "HTTP 404: model not found" — not just a guess.
+        _errbuf = _LLMErrorCapture()
+        _hlog = logging.getLogger("journey_forge_local")
+        _hlog.addHandler(_errbuf)
         with _PIPELINE_LOCK:
             hprogress.set_reporter(_rep)
             _apply_harness_config(cfg)
             n_before = len(_read_json_file(HARNESS_STATE / "buckets.json", {}).get("buckets", {}))
             n_seg_before = _seg_count()
             _rep("ingest", 0, 0, "atomizing")
-            run_ingest_file(trace_json)
-            run_distill()
-            _rep("install", 0, 0, "")
-            installed = install_registry(Path(cfg["skills_root"]))
-            hprogress.set_reporter(None)
+            try:
+                run_ingest_file(trace_json)
+                run_distill()
+                _rep("install", 0, 0, "")
+                installed = install_registry(Path(cfg["skills_root"]))
+            finally:
+                hprogress.set_reporter(None)
+                _hlog.removeHandler(_errbuf)
         _rep("done", 0, 0, f"{len(installed)} skill(s)")
         n_buckets = len(_read_json_file(HARNESS_STATE / "buckets.json", {}).get("buckets", {}))
         classified = _seg_count() - n_seg_before  # segments THIS recording classified
         note = ""
+        detail = f" Last error: {_errbuf.last}" if _errbuf.last else ""
         if not installed:
             note = ("No skills produced — likely the classify/distill LLM call failed "
-                    "(check the LLM key/base/model; a custom gateway may not serve the model).")
+                    "(check the LLM key/base/model; a custom gateway may not serve the model)."
+                    + detail)
         elif classified <= 0:
             # Nothing from this recording got classified — the classify LLM calls
             # failed for its segments (e.g. the gateway blocked them).
             note = ("This recording classified 0 segments — the classify LLM calls failed "
-                    "(check Logs / the LLM gateway). Use Reprocess after fixing it.")
+                    "(check Logs / the LLM gateway). Use Reprocess after fixing it." + detail)
         elif n_buckets == n_before:
             # Classified fine, but merged into existing skill(s) rather than creating
             # a new capability bucket — the intended behavior for a repeat of a known
