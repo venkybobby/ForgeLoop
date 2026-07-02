@@ -19,17 +19,20 @@ Run:  python -m integration.recorder.serve
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import os
 import secrets
 import sys
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 FORGE = ROOT / "forge"
 DATA = Path(os.environ.setdefault("JFL_DATA_DIR", str(FORGE / "data")))
 KEYS_FILE = DATA / "api-keys.json"
+TENANTS_DIR = DATA / "tenants"   # per-client isolated data dirs (traces + skills)
 
 # Local-only routes that shell out or are desktop-specific — refused when hosted.
 BLOCKED_PREFIXES = ("/api/desktop", "/api/codex", "/api/ext/open", "/api/ext/reveal")
@@ -46,16 +49,33 @@ def _seed_keys() -> None:
         KEYS_FILE.write_text("[]")
 
 
-def _load_forge_app():
-    spec = importlib.util.spec_from_file_location("jfl_server", FORGE / "server" / "server.py")
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["jfl_server"] = mod
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod.app
+def _load_forge_module(mod_name: str, data_dir: Path):
+    """Load a fresh copy of the vendored server bound to `data_dir`.
+
+    Each call gets its OWN module object (own DATA_DIR/TRACES_DIR/HARNESS_STATE
+    globals), which is how one process serves many isolated tenants. The shared
+    `harness` package is retargeted per distill run inside the server module.
+    """
+    prev = os.environ.get("JFL_DATA_DIR")
+    os.environ["JFL_DATA_DIR"] = str(data_dir)
+    try:
+        spec = importlib.util.spec_from_file_location(mod_name, FORGE / "server" / "server.py")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod_name] = mod
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        return mod
+    finally:
+        if prev is None:
+            os.environ.pop("JFL_DATA_DIR", None)
+        else:
+            os.environ["JFL_DATA_DIR"] = prev
 
 
 _seed_keys()
-app = _load_forge_app()
+# The CONTROL app: serves the portal, /healthz and the admin key API. Its own
+# data routes are never dispatched to (tenant apps handle those), so it holds no
+# client recordings itself.
+app = _load_forge_module("jfl_server", DATA).app
 
 from fastapi import Header, HTTPException  # noqa: E402  (fastapi is imported by the server)
 from fastapi.responses import HTMLResponse, JSONResponse  # noqa: E402
@@ -137,6 +157,77 @@ for r in _mine:
     app.router.routes.remove(r)
 for r in reversed(_mine):
     app.router.routes.insert(0, r)
+
+
+# ─────────────────────── per-tenant data isolation ─────────────────────────
+# Each API key gets its OWN Forge server instance bound to its OWN data dir, so
+# one client can never see another's recordings or distilled skills. Requests
+# are routed to the right instance by the Bearer key; the portal/admin/healthz
+# routes stay on the shared control app.
+_tenant_apps: dict[str, object] = {}
+_tenant_lock = threading.Lock()
+
+# Paths served by the shared CONTROL app (no tenant data). Everything else is a
+# per-tenant data/recording route and requires a valid Bearer key.
+CONTROL_EXACT = {"/", "/portal", "/healthz", "/favicon.ico"}
+CONTROL_PREFIXES = ("/admin/",)
+
+
+def _tenant_id(key: str) -> str:
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+
+
+def _tenant_app(key: str):
+    """Get-or-build the isolated server app for this API key."""
+    tid = _tenant_id(key)
+    with _tenant_lock:
+        cached = _tenant_apps.get(tid)
+        if cached is not None:
+            return cached
+        ddir = TENANTS_DIR / tid
+        ddir.mkdir(parents=True, exist_ok=True)
+        # This tenant's server authenticates against ITS OWN key file (just this
+        # one key) and installs distilled skills inside its own dir — never the
+        # shared ~/.claude/skills.
+        (ddir / "api-keys.json").write_text(json.dumps([key]))
+        (ddir / "config.json").write_text(json.dumps({"skills_root": str(ddir / "installed-skills")}))
+        mod = _load_forge_module(f"jfl_server_{tid}", ddir)
+        _tenant_apps[tid] = mod.app
+        return mod.app
+
+
+def _bearer_from_scope(scope) -> str | None:
+    for name, value in scope.get("headers", []):
+        if name == b"authorization":
+            return value.decode("latin-1").replace("Bearer ", "").strip() or None
+    return None
+
+
+async def _send_json(send, status: int, payload: dict) -> None:
+    body = json.dumps(payload).encode("utf-8")
+    await send({"type": "http.response.start", "status": status,
+                "headers": [(b"content-type", b"application/json"),
+                            (b"content-length", str(len(body)).encode())]})
+    await send({"type": "http.response.body", "body": body})
+
+
+async def application(scope, receive, send):
+    """ASGI dispatcher: control routes → shared app; data routes → tenant app."""
+    if scope["type"] != "http":
+        await app(scope, receive, send)
+        return
+    path = scope.get("path", "")
+    if path in CONTROL_EXACT or any(path.startswith(p) for p in CONTROL_PREFIXES):
+        await app(scope, receive, send)
+        return
+    if any(path.startswith(b) for b in BLOCKED_PREFIXES):
+        await _send_json(send, 403, {"detail": "endpoint disabled on the hosted server"})
+        return
+    key = _bearer_from_scope(scope)
+    if not key or key not in set(_keys()):
+        await _send_json(send, 401, {"detail": "missing or invalid API key"})
+        return
+    await _tenant_app(key)(scope, receive, send)
 
 
 PORTAL_HTML = r"""<!doctype html><html lang=en><head><meta charset=utf-8>
@@ -222,7 +313,8 @@ setInterval(()=>{if(key())refresh()},5000);
 def main() -> None:
     import uvicorn
     port = int(os.environ.get("PORT", os.environ.get("JFL_PORT", "8099")))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # Serve the tenant-routing dispatcher, not the bare control app.
+    uvicorn.run(application, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

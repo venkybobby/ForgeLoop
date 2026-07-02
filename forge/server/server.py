@@ -455,7 +455,19 @@ def _assemble_trace(upload_id: str, meta: dict) -> list[dict]:
 # Runs IN-PROCESS (no subprocess), so it works when the whole thing is frozen
 # into a single binary (PyInstaller sidecar / native app). Serialized by a lock
 # so concurrent finalizes don't race on buckets.json.
-_PIPELINE_LOCK = threading.Lock()
+# Process-global distill lock. In multi-tenant hosting each tenant loads its OWN
+# copy of this module (own DATA_DIR), but the `harness` package is imported once
+# and shared — so its state paths (config.STATE_DIR) are retargeted per run and
+# MUST be serialized across every tenant instance, not just within one. We stash
+# the lock on the shared harness.config so all instances acquire the same one.
+try:
+    from harness import config as _shared_hcfg  # shared singleton across instances
+    _PIPELINE_LOCK = getattr(_shared_hcfg, "_forgeloop_pipeline_lock", None)
+    if _PIPELINE_LOCK is None:
+        _PIPELINE_LOCK = threading.Lock()
+        _shared_hcfg._forgeloop_pipeline_lock = _PIPELINE_LOCK
+except Exception:  # pragma: no cover - harness always importable here
+    _PIPELINE_LOCK = threading.Lock()
 _PROGRESS: dict[str, dict] = {}     # upload_id → {phase,current,total,detail} (in-memory, live)
 
 
@@ -489,6 +501,13 @@ def _apply_harness_config(cfg: dict) -> None:
     if classify:
         hconfig.CLASSIFY_MODEL = classify
         hconfig.BUCKET_MODEL = classify
+    # Per-tenant isolation: the harness package is shared across tenant instances,
+    # so point its state (buckets.json, segments.jsonl, distilled skills) and its
+    # tracks dir at THIS instance's data dir. Safe because callers hold the
+    # process-global _PIPELINE_LOCK around the whole ingest→distill→install run.
+    hconfig.STATE_DIR = HARNESS_STATE
+    hconfig.HARNESS_ROOT = HARNESS_STATE
+    hconfig.TRACKS_DIR = TRACES_DIR
 
 
 def _ingest_distill_install(upload_id: str) -> None:
