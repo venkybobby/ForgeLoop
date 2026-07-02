@@ -91,12 +91,18 @@ You do this with **your** developer account (I can't from here):
 
 - **Keep `JFL_ADMIN_TOKEN` secret** — it mints client keys. Rotate with
   `fly secrets set`. HTTPS is enforced (`force_https`).
-- **Per-client keys authenticate, but the vendored server stores all recordings
-  and skills in one data dir** — it does **not** yet partition data per client.
-  Fine for *your own* captures or a trusted pilot; for true SaaS isolation
-  (each client sees only their own skills) we'd add a per-key namespace under
-  `data/<key>/…`. That's the recommended next step before onboarding mutually
-  untrusting tenants.
+- **Per-client data isolation is enforced.** Each API key gets its OWN Forge
+  server instance bound to its OWN data dir (`data/tenants/<sha256(key)[:16]>/`),
+  so one client can never see another's recordings or distilled skills. An ASGI
+  dispatcher (`integration/recorder/serve.py`) routes each request to the right
+  instance by its `Bearer` key; the portal, `/healthz` and the admin API stay on
+  a shared control app that holds no client data. Installed skills also land
+  under each tenant's dir, never the shared `~/.claude/skills`.
+  - *Upgrade note:* recordings captured before this change live in the legacy
+    shared dir (`data/traces`) and won't appear under a tenant — record fresh
+    ones after deploying. *Scale note:* one in-memory server instance per active
+    key — fine for pilots/hundreds of keys; for large multi-tenant scale move to
+    a single context-scoped store or per-tenant DB.
 - Recordings can contain sensitive page content — the extension has a redactor
   (`forge/extension/src/redaction/`); confirm your clients' redaction settings.
 - Distillation calls your LLM (`SF_LLM_KEY`); cost scales with recordings.
